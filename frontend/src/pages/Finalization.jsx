@@ -2,31 +2,44 @@ import React, { useState } from "react";
 import Header from "../components/Header";
 import { Box, TextField, Button, Paper, Typography } from "@mui/material";
 import axios from "axios";
-import { API } from "../api/auth";
 
 const Finalization = () => {
   const [docName, setDocName] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
 
-  const handleFileChange = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) {
-      alert("Please select a file");
       return;
     }
 
-    // Just a name check — safer than relying on MIME
+    // Validate JSON file
     if (!file.name.endsWith(".json")) {
       alert("Only JSON files are allowed!");
+      e.target.value = ""; // Clear input
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      alert("Please select a file");
       return;
     }
 
     const username = localStorage.getItem("username");
     const email = localStorage.getItem("email");
 
-    // FIX: Use docName state instead of non-existent ref
     if (!docName.trim()) {
       alert("Please enter a document name");
+      return;
+    }
+
+    if (!username || !email) {
+      alert("User credentials not found. Please login again.");
       return;
     }
 
@@ -36,27 +49,44 @@ const Finalization = () => {
     formData.append("username", username);
     formData.append("email", email);
     formData.append("finalization_document_name", docName.trim());
-    formData.append("json_file", file);
+    formData.append("json_file", selectedFile);
 
-    console.log("Uploading file:", file.name, file.size, "bytes");
+    console.log(
+      "📤 Uploading file:",
+      selectedFile.name,
+      selectedFile.size,
+      "bytes"
+    );
+    console.log("📋 Form data:");
+    for (let pair of formData.entries()) {
+      console.log(`  ${pair[0]}:`, pair[1]);
+    }
 
     try {
       const res = await axios.post(
         "http://127.0.0.1:8000/upload_json",
         formData,
         {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
-      alert("File saved OK!");
-      console.log("Upload success:", res.data);
+
+      console.log("✅ Upload success:", res.data);
+      alert(`File saved successfully! ID: ${res.data.inserted_id}`);
 
       // Reset form
       setDocName("");
-      e.target.value = ""; // Clear file input
+      setSelectedFile(null);
+      // Reset file input
+      document.getElementById("file-input").value = "";
     } catch (err) {
-      console.error("Upload failed:", err);
-      alert("Upload failed. Check console for details.");
+      console.error("❌ Upload failed:", err);
+      const errorMsg =
+        err.response?.data?.detail ||
+        "Upload failed. Check console for details.";
+      alert(errorMsg);
     } finally {
       setUploading(false);
     }
@@ -80,18 +110,29 @@ const Finalization = () => {
           />
 
           <Button
-            variant="contained"
+            variant="outlined"
             component="label"
-            sx={{ mt: 2, bgcolor: "#0f62fe", textTransform: "none" }}
-            disabled={uploading}
+            fullWidth
+            sx={{ mt: 2, textTransform: "none" }}
           >
-            {uploading ? "Uploading..." : "Upload JSON File"}
+            {selectedFile ? selectedFile.name : "Choose JSON File"}
             <input
+              id="file-input"
               type="file"
               hidden
               accept=".json,application/json"
-              onChange={handleFileChange}
+              onChange={handleFileSelect}
             />
+          </Button>
+
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{ mt: 2, bgcolor: "#0f62fe", textTransform: "none" }}
+            disabled={uploading || !selectedFile}
+            onClick={handleUpload}
+          >
+            {uploading ? "Uploading..." : "Upload"}
           </Button>
         </Paper>
       </Box>

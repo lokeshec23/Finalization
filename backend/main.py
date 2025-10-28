@@ -1,7 +1,7 @@
 from app.routes import auth_router
 from app.db.database import db
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, UploadFile, Form, HTTPException
+from fastapi import FastAPI, UploadFile, Form, HTTPException, File  # ✅ Added File import
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 import json, os, traceback
@@ -34,18 +34,31 @@ async def upload_json(
     username: str = Form(...),
     email: str = Form(...),
     finalization_document_name: str = Form(...),
-    json_file: UploadFile = None,
+    json_file: UploadFile = File(...)
 ):
     try:
-        if not json_file:
+        if not json_file or not json_file.filename:
             raise HTTPException(status_code=400, detail="No file provided")
 
-        # Read and validate JSON
         file_content = await json_file.read()
-        try:
-            raw_json = json.loads(file_content.decode("utf-8"))
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid JSON file")
+        
+        print(f"Received file: {json_file.filename}, size: {len(file_content)} bytes")
+        
+        # ✅ TRY MULTIPLE ENCODINGS
+        raw_json = None
+        encodings = ['utf-8', 'utf-8-sig', 'windows-1252', 'latin-1', 'iso-8859-1']
+        
+        for encoding in encodings:
+            try:
+                decoded_content = file_content.decode(encoding)
+                raw_json = json.loads(decoded_content)
+                print(f"✅ Successfully decoded with: {encoding}")
+                break
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                continue
+        
+        if raw_json is None:
+            raise HTTPException(status_code=400, detail="Could not decode JSON file with any supported encoding")
 
         document = {
             "username": username,
@@ -56,7 +69,13 @@ async def upload_json(
 
         result = await upload_json_collection.insert_one(document)
 
-        return {"message": "File saved ok!", "inserted_id": str(result.inserted_id)}
+        print(f"✅ Document inserted with ID: {result.inserted_id}")
+
+        return {
+            "message": "File saved successfully!",
+            "inserted_id": str(result.inserted_id),
+            "filename": json_file.filename
+        }
 
     except HTTPException:
         raise
@@ -64,8 +83,5 @@ async def upload_json(
         print("Upload error:", e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
-
-
-
 
 app.include_router(auth_router.router)
