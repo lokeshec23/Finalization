@@ -1,3 +1,4 @@
+from bson import ObjectId
 from app.routes import auth_router
 from app.db.database import db
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,7 +6,7 @@ from fastapi import FastAPI, UploadFile, Form, HTTPException, File  # ✅ Added 
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 import json, os, traceback
-
+from datetime import datetime
 # Load .env
 load_dotenv()
 
@@ -46,16 +47,11 @@ async def upload_json(
         
         # Try multiple encodings
         raw_json = None
-        encodings = ['utf-8', 'utf-8-sig', 'windows-1252', 'latin-1', 'iso-8859-1', 'cp1252']
+        encodings = ['utf-8', 'utf-8-sig', 'windows-1252', 'latin-1', 'iso-8859-1']
         
         for encoding in encodings:
             try:
                 decoded_content = file_content.decode(encoding)
-                
-                # ✅ Normalize unicode characters
-                import unicodedata
-                decoded_content = unicodedata.normalize('NFKC', decoded_content)
-                
                 raw_json = json.loads(decoded_content)
                 print(f"✅ Successfully decoded with: {encoding}")
                 break
@@ -63,26 +59,16 @@ async def upload_json(
                 continue
         
         if raw_json is None:
-            raise HTTPException(status_code=400, detail="Could not decode JSON file")
+            raise HTTPException(status_code=400, detail="Could not decode JSON file with any supported encoding")
 
-        # ✅ Clean the JSON data recursively
-        def clean_text(obj):
-            if isinstance(obj, dict):
-                return {k: clean_text(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [clean_text(item) for item in obj]
-            elif isinstance(obj, str):
-                # Normalize and clean text
-                return obj.encode('utf-8', errors='ignore').decode('utf-8')
-            return obj
-        
-        raw_json = clean_text(raw_json)
-
+        # ✅ UPDATED: Store original filename
         document = {
             "username": username,
             "email": email,
             "finalization_document_name": finalization_document_name,
+            "original_filename": json_file.filename,  # ✅ ADD THIS LINE
             "raw_json": raw_json,
+            "upload_date": datetime.utcnow()  # ✅ Optional: Add upload timestamp
         }
 
         result = await upload_json_collection.insert_one(document)
@@ -92,13 +78,83 @@ async def upload_json(
         return {
             "message": "File saved successfully!",
             "inserted_id": str(result.inserted_id),
-            "filename": json_file.filename
+            "filename": json_file.filename  # ✅ Return original filename
         }
 
     except HTTPException:
         raise
     except Exception as e:
         print("Upload error:", e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+# Existing list endpoint (if not already added)
+@app.get("/list_json")
+async def list_json(username: str = None):
+    try:
+        query = {"username": username} if username else {}
+        
+        cursor = upload_json_collection.find(query).sort("_id", -1)
+        documents = await cursor.to_list(length=100)
+        
+        # Convert ObjectId to string and prepare response
+        for doc in documents:
+            doc["_id"] = str(doc["_id"])
+        
+        return {"documents": documents}
+    
+    except Exception as e:
+        print("List error:", e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+# DELETE endpoint
+@app.delete("/delete_json/{document_id}")
+async def delete_json(document_id: str):
+    try:
+        # Validate ObjectId
+        if not ObjectId.is_valid(document_id):
+            raise HTTPException(status_code=400, detail="Invalid document ID")
+        
+        result = await upload_json_collection.delete_one({"_id": ObjectId(document_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        return {"message": "Document deleted successfully", "deleted_id": document_id}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("Delete error:", e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+# GET single document endpoint (for view)
+@app.get("/get_json/{document_id}")
+async def get_json(document_id: str):
+    try:
+        # Validate ObjectId
+        if not ObjectId.is_valid(document_id):
+            raise HTTPException(status_code=400, detail="Invalid document ID")
+        
+        document = await upload_json_collection.find_one({"_id": ObjectId(document_id)})
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # Convert ObjectId to string for JSON serialization
+        document["_id"] = str(document["_id"])
+        
+        return document
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("Fetch error:", e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
