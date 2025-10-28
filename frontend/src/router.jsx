@@ -3,7 +3,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Finalization from "./pages/Finalization";
-import FinalizationView from "./pages/FinalizationView";
 import Filter from "./pages/Filter";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -24,14 +23,6 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <Finalization />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/finalization/view",
-    element: (
-      <ProtectedRoute>
-        <FinalizationView />
       </ProtectedRoute>
     ),
   },

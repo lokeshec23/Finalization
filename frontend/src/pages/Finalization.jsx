@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import {
   Box,
@@ -10,7 +10,7 @@ import {
   Badge,
 } from "@mui/material";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import DataViewer from "../components/DataViewer";
 import NoteExtractionStatusModal from "../components/NoteExtractionStatusModal";
@@ -19,6 +19,8 @@ import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 
 const Finalization = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [docName, setDocName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -28,12 +30,28 @@ const Finalization = () => {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("");
 
-  useEffect(() => {
-    console.log("Uploaded Data:", uploadedData);
-  }, [uploadedData]);
-
   // Modal state
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+
+  // ✅ Check if coming from Dashboard view
+  useEffect(() => {
+    if (location.state?.viewMode && location.state?.documentData) {
+      const { documentData, documentName, originalFileName } = location.state;
+
+      setUploadedData({
+        documentName: documentName || "Document",
+        originalFileName: originalFileName || "Document.json",
+        raw_json: documentData,
+      });
+
+      // Extract categories
+      if (documentData.finalisation) {
+        const cats = Object.keys(documentData.finalisation);
+        setCategories(cats);
+        setActiveCategory(cats[0] || "");
+      }
+    }
+  }, [location.state]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -101,8 +119,8 @@ const Finalization = () => {
         // Set the uploaded data to state
         setUploadedData({
           documentName: docName.trim(),
-          raw_json: jsonData,
           originalFileName: selectedFile.name,
+          raw_json: jsonData,
         });
 
         // Extract categories
@@ -136,7 +154,9 @@ const Finalization = () => {
     setCategories([]);
     setActiveCategory("");
     setStatusModalOpen(false);
-    document.getElementById("file-input").value = "";
+    if (document.getElementById("file-input")) {
+      document.getElementById("file-input").value = "";
+    }
   };
 
   // Count final notes
@@ -145,7 +165,7 @@ const Finalization = () => {
       (item) => item.status && item.status.includes("Note - Final")
     ).length || 0;
 
-  // If data is uploaded, show split view
+  // If data is uploaded or in view mode, show split view
   if (uploadedData) {
     const categoryData =
       uploadedData.raw_json?.finalisation?.[activeCategory] || [];
@@ -169,28 +189,30 @@ const Finalization = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Button
               startIcon={<ArrowBackIcon />}
-              onClick={handleReset}
+              onClick={() => navigate("/dashboard")}
               variant="outlined"
               size="small"
               sx={{ textTransform: "none" }}
             >
-              Upload New
+              Back to Dashboard
             </Button>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {uploadedData?.originalFileName}
-            </Typography>
+
+            {/* Display original JSON filename */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 600, color: "#0f62fe" }}
+              >
+                📄
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                {uploadedData.originalFileName}
+              </Typography>
+            </Box>
           </Box>
 
           {/* Note Extraction Status Button */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            {/* <Button
-              variant="outlined"
-              size="small"
-              onClick={() => navigate("/dashboard")}
-              sx={{ textTransform: "none" }}
-            >
-              Dashboard
-            </Button> */}
             <IconButton
               color="primary"
               onClick={() => setStatusModalOpen(true)}

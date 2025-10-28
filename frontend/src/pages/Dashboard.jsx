@@ -21,7 +21,6 @@ import {
   Tooltip,
   Alert,
   Snackbar,
-  Chip,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { documentAPI } from "../api/documentAPI";
@@ -42,6 +41,7 @@ const Dashboard = () => {
     message: "",
     severity: "success",
   });
+  const [viewLoading, setViewLoading] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -61,18 +61,42 @@ const Dashboard = () => {
     }
   };
 
-  const handleView = (doc) => {
-    // Store document data in sessionStorage for the view page
-    sessionStorage.setItem("currentDocument", JSON.stringify(doc));
-    sessionStorage.setItem("documentId", doc._id);
-    navigate("/finalization/view", {
-      state: {
-        documentData: doc.raw_json,
-        documentName: doc.finalization_document_name,
-        originalFileName: doc.original_filename, // ✅ Pass original filename
-        documentId: doc._id,
-      },
-    });
+  // ✅ UPDATED: Fetch by filename and navigate
+  const handleView = async (doc) => {
+    try {
+      setViewLoading(true);
+      const filename = doc.original_filename;
+      const username = localStorage.getItem("username");
+
+      if (!filename) {
+        showSnackbar("Filename not found", "error");
+        return;
+      }
+
+      // Fetch the document by filename
+      const fetchedDoc = await documentAPI.getDocumentByFilename(
+        filename,
+        username
+      );
+
+      console.log("✅ Fetched document:", fetchedDoc);
+
+      // Navigate to finalization with the data
+      navigate("/finalization", {
+        state: {
+          viewMode: true,
+          documentData: fetchedDoc.raw_json,
+          documentName: fetchedDoc.finalization_document_name,
+          originalFileName: fetchedDoc.original_filename,
+          documentId: fetchedDoc._id,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching document:", error);
+      showSnackbar("Failed to load document", "error");
+    } finally {
+      setViewLoading(false);
+    }
   };
 
   const handleDeleteClick = (doc) => {
@@ -108,7 +132,6 @@ const Dashboard = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // ✅ Format upload date
   const formatDate = (doc) => {
     if (doc.upload_date) {
       return new Date(doc.upload_date).toLocaleDateString();
@@ -218,7 +241,6 @@ const Dashboard = () => {
                   <TableRow key={doc._id} hover>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>
-                      {/* ✅ Display original JSON filename */}
                       <Box
                         sx={{ display: "flex", alignItems: "center", gap: 1 }}
                       >
@@ -249,13 +271,18 @@ const Dashboard = () => {
                             color="primary"
                             size="small"
                             onClick={() => handleView(doc)}
+                            disabled={viewLoading}
                             sx={{
                               "&:hover": {
                                 bgcolor: "#e3f2fd",
                               },
                             }}
                           >
-                            <VisibilityIcon fontSize="small" />
+                            {viewLoading ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              <VisibilityIcon fontSize="small" />
+                            )}
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Delete Document">

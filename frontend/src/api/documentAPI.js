@@ -15,13 +15,30 @@ export const documentAPI = {
     }
   },
 
-  // Get single document
+  // Get single document by ID
   getDocument: async (documentId) => {
     try {
       const response = await axios.get(`${API_BASE}/get_json/${documentId}`);
       return response.data;
     } catch (error) {
       console.error("Error fetching document:", error);
+      throw error;
+    }
+  },
+
+  // ✅ NEW: Get document by filename
+  getDocumentByFilename: async (filename, username = null) => {
+    try {
+      const params = { filename };
+      if (username) {
+        params.username = username;
+      }
+      const response = await axios.get(`${API_BASE}/get_json_by_filename`, {
+        params,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching document by filename:", error);
       throw error;
     }
   },

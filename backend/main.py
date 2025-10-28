@@ -158,4 +158,33 @@ async def get_json(document_id: str):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
+# Get document by original filename
+@app.get("/get_json_by_filename")
+async def get_json_by_filename(filename: str, username: str = None):
+    try:
+        # Build query
+        query = {"original_filename": filename}
+        if username:
+            query["username"] = username
+        
+        # Find first matching document
+        document = await upload_json_collection.find_one(query)
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # Convert ObjectId to string for JSON serialization
+        document["_id"] = str(document["_id"])
+        
+        print(f"✅ Found document by filename: {filename}")
+        
+        return document
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("Fetch by filename error:", e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
 app.include_router(auth_router.router)
