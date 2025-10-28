@@ -44,13 +44,18 @@ async def upload_json(
         
         print(f"Received file: {json_file.filename}, size: {len(file_content)} bytes")
         
-        # ✅ TRY MULTIPLE ENCODINGS
+        # Try multiple encodings
         raw_json = None
-        encodings = ['utf-8', 'utf-8-sig', 'windows-1252', 'latin-1', 'iso-8859-1']
+        encodings = ['utf-8', 'utf-8-sig', 'windows-1252', 'latin-1', 'iso-8859-1', 'cp1252']
         
         for encoding in encodings:
             try:
                 decoded_content = file_content.decode(encoding)
+                
+                # ✅ Normalize unicode characters
+                import unicodedata
+                decoded_content = unicodedata.normalize('NFKC', decoded_content)
+                
                 raw_json = json.loads(decoded_content)
                 print(f"✅ Successfully decoded with: {encoding}")
                 break
@@ -58,7 +63,20 @@ async def upload_json(
                 continue
         
         if raw_json is None:
-            raise HTTPException(status_code=400, detail="Could not decode JSON file with any supported encoding")
+            raise HTTPException(status_code=400, detail="Could not decode JSON file")
+
+        # ✅ Clean the JSON data recursively
+        def clean_text(obj):
+            if isinstance(obj, dict):
+                return {k: clean_text(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [clean_text(item) for item in obj]
+            elif isinstance(obj, str):
+                # Normalize and clean text
+                return obj.encode('utf-8', errors='ignore').decode('utf-8')
+            return obj
+        
+        raw_json = clean_text(raw_json)
 
         document = {
             "username": username,
