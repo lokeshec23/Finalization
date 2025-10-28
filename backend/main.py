@@ -1,34 +1,30 @@
-from fastapi.middleware.cors import CORSMiddleware
-from app.models.upload_json_model import UploadJsonModel
 from app.routes import auth_router
-from fastapi import FastAPI
 from app.db.database import db
-import traceback
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, UploadFile, Form, HTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
-import json
 from dotenv import load_dotenv
-import os
+import json, os, traceback
 
-# Load environment variables from .env file
+# Load .env
 load_dotenv()
 
 app = FastAPI(title="Finalization API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # during dev; restrict later
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# DB setup
 database_url = os.getenv("MONGODB_URL")
 db_name = os.getenv("DB_Name")
 
-print("Connecting to database:", database_url, "DB Name:", db_name)
+print(f"Connecting to database: {database_url} | DB Name: {db_name}")
 
-# Mongo connection
 client = AsyncIOMotorClient(database_url)
 db = client[db_name]
 upload_json_collection = db["uploadedJSON"]
@@ -38,32 +34,38 @@ async def upload_json(
     username: str = Form(...),
     email: str = Form(...),
     finalization_document_name: str = Form(...),
-    json_file: UploadFile = None
+    json_file: UploadFile = None,
 ):
     try:
-        # Read and parse uploaded file
-        file_content = await json_file.read()
-        raw_json = json.loads(file_content.decode("utf-8"))
+        if not json_file:
+            raise HTTPException(status_code=400, detail="No file provided")
 
-        # Prepare document
+        # Read and validate JSON
+        file_content = await json_file.read()
+        try:
+            raw_json = json.loads(file_content.decode("utf-8"))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid JSON file")
+
         document = {
             "username": username,
             "email": email,
             "finalization_document_name": finalization_document_name,
-            "raw_json": raw_json
+            "raw_json": raw_json,
         }
 
-        # Save document to MongoDB
         result = await upload_json_collection.insert_one(document)
 
-        return {
-            "message": "File saved ok!",
-            "inserted_id": str(result.inserted_id)
-        }
+        return {"message": "File saved ok!", "inserted_id": str(result.inserted_id)}
 
+    except HTTPException:
+        raise
     except Exception as e:
         print("Upload error:", e)
-        raise HTTPException(status_code=500, detail="Failed to save document")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
 
 
 app.include_router(auth_router.router)

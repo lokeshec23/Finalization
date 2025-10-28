@@ -8,52 +8,58 @@ const Finalization = () => {
   const [docName, setDocName] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const ext = file.name.split(".").pop().toLowerCase();
-    if (ext !== "json") {
-      alert("Only JSON files are allowed.");
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      alert("Please select a file");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const text = evt.target.result;
-        const raw_json = JSON.parse(text); // may throw if invalid
+    // Just a name check — safer than relying on MIME
+    if (!file.name.endsWith(".json")) {
+      alert("Only JSON files are allowed!");
+      return;
+    }
 
-        const username = localStorage.getItem("username") || "";
-        const email = localStorage.getItem("email") || "";
+    const username = localStorage.getItem("username");
+    const email = localStorage.getItem("email");
 
-        const payload = {
-          username,
-          email,
-          finalization_document_name: docName,
-          raw_json,
-        };
+    // FIX: Use docName state instead of non-existent ref
+    if (!docName.trim()) {
+      alert("Please enter a document name");
+      return;
+    }
 
-        setUploading(true);
-        const res = await axios.post(`${API}/upload_json`, payload, {
-          headers: {
-            "Content-Type": "application/json",
-            // include token header if your backend needs auth:
-            // Authorization: `Bearer ${localStorage.getItem('token')}`
-          },
-          timeout: 15000,
-        });
+    setUploading(true);
 
-        alert(res.data?.message || "File saved ok!");
-      } catch (err) {
-        console.error("Upload error:", err);
-        alert("Invalid JSON or upload failed. Check console for details.");
-      } finally {
-        setUploading(false);
-      }
-    };
+    const formData = new FormData();
+    formData.append("username", username);
+    formData.append("email", email);
+    formData.append("finalization_document_name", docName.trim());
+    formData.append("json_file", file);
 
-    reader.readAsText(file);
+    console.log("Uploading file:", file.name, file.size, "bytes");
+
+    try {
+      const res = await axios.post(
+        "http://127.0.0.1:8000/upload_json",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+      alert("File saved OK!");
+      console.log("Upload success:", res.data);
+
+      // Reset form
+      setDocName("");
+      e.target.value = ""; // Clear file input
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Upload failed. Check console for details.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (

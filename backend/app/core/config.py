@@ -6,7 +6,8 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     JWT_ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
-
+    DB_Name: str
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
