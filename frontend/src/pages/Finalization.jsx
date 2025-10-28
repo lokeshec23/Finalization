@@ -2,27 +2,30 @@ import React, { useState } from "react";
 import Header from "../components/Header";
 import { Box, TextField, Button, Paper, Typography } from "@mui/material";
 import axios from "axios";
+import { API } from "../api/auth";
 
 const Finalization = () => {
   const [docName, setDocName] = useState("");
-  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
-  const handleFileChange = async (e) => {
-    const uploadedFile = e.target.files[0];
-    if (!uploadedFile) return;
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const ext = uploadedFile.name.split(".").pop().toLowerCase();
+    const ext = file.name.split(".").pop().toLowerCase();
     if (ext !== "json") {
       alert("Only JSON files are allowed.");
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = async (event) => {
+    reader.onload = async (evt) => {
       try {
-        const raw_json = JSON.parse(event.target.result);
-        const username = localStorage.getItem("username");
-        const email = localStorage.getItem("email");
+        const text = evt.target.result;
+        const raw_json = JSON.parse(text); // may throw if invalid
+
+        const username = localStorage.getItem("username") || "";
+        const email = localStorage.getItem("email") || "";
 
         const payload = {
           username,
@@ -31,26 +34,26 @@ const Finalization = () => {
           raw_json,
         };
 
-        const res = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/upload_json`,
-          payload,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        setUploading(true);
+        const res = await axios.post(`${API}/upload_json`, payload, {
+          headers: {
+            "Content-Type": "application/json",
+            // include token header if your backend needs auth:
+            // Authorization: `Bearer ${localStorage.getItem('token')}`
+          },
+          timeout: 15000,
+        });
 
-        alert(res.data.message || "File saved ok!");
-        setFile(uploadedFile);
+        alert(res.data?.message || "File saved ok!");
       } catch (err) {
-        console.error(err);
-        alert("Invalid JSON or upload failed.");
+        console.error("Upload error:", err);
+        alert("Invalid JSON or upload failed. Check console for details.");
+      } finally {
+        setUploading(false);
       }
     };
 
-    reader.readAsText(uploadedFile);
+    reader.readAsText(file);
   };
 
   return (
@@ -74,9 +77,15 @@ const Finalization = () => {
             variant="contained"
             component="label"
             sx={{ mt: 2, bgcolor: "#0f62fe", textTransform: "none" }}
+            disabled={uploading}
           >
-            Upload JSON File
-            <input type="file" hidden onChange={handleFileChange} />
+            {uploading ? "Uploading..." : "Upload JSON File"}
+            <input
+              type="file"
+              hidden
+              accept=".json,application/json"
+              onChange={handleFileChange}
+            />
           </Button>
         </Paper>
       </Box>
