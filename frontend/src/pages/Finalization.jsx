@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Header from "../components/Header";
 import {
   Box,
@@ -27,6 +27,10 @@ const Finalization = () => {
   const [uploadedData, setUploadedData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("");
+
+  useEffect(() => {
+    console.log("Uploaded Data:", uploadedData);
+  }, [uploadedData]);
 
   // Modal state
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -98,6 +102,7 @@ const Finalization = () => {
         setUploadedData({
           documentName: docName.trim(),
           raw_json: jsonData,
+          originalFileName: selectedFile.name,
         });
 
         // Extract categories
@@ -172,7 +177,7 @@ const Finalization = () => {
               Upload New
             </Button>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {uploadedData.documentName}
+              {uploadedData?.originalFileName}
             </Typography>
           </Box>
 
