@@ -21,8 +21,11 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await loginUser(form);
-      localStorage.setItem("token", res.access_token);
+      const response = await loginUser(form);
+      console.log(response);
+      localStorage.setItem("token", response.access_token);
+      localStorage.setItem("username", response.username);
+      localStorage.setItem("email", response.email);
       navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.detail || "Login failed");

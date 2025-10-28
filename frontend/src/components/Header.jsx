@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 
 const Header = () => {
   const navigate = useNavigate();
-  const username = "Lokesh"; // Replace later with actual user name from auth
+  const username = localStorage.getItem("username") || ""; // Replace later with actual user name from auth
   const firstLetter = username ? username[0].toUpperCase() : "?";
 
   const [anchorEl, setAnchorEl] = useState(null);

@@ -1,6 +1,8 @@
-from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.models.upload_json_model import UploadJsonModel
 from app.routes import auth_router
+from fastapi import FastAPI
+from app.db.database import db
 
 app = FastAPI(title="Finalization API")
 
@@ -14,9 +16,18 @@ app.add_middleware(
 
 app.include_router(auth_router.router)
 
-@app.get("/")
-def read_root():
-    return {"message": "Finalization API is running"}
+
+# @app.post("/upload_json")
+# async def upload_json(data: UploadJsonModel):
+#     try:
+#         await db.uploadJson.insert_one(data.dict())
+#         return {"message": "File saved ok!"}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+# @app.get("/")
+# def read_root():
+#     return {"message": "Finalization API is running"}
 
 
 
