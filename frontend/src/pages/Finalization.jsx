@@ -1,12 +1,21 @@
 import React, { useState } from "react";
 import Header from "../components/Header";
-import { Box, TextField, Button, Paper, Typography, Grid } from "@mui/material";
+import {
+  Box,
+  TextField,
+  Button,
+  Paper,
+  Typography,
+  IconButton,
+  Badge,
+} from "@mui/material";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import DataViewer from "../components/DataViewer";
+import NoteExtractionStatusModal from "../components/NoteExtractionStatusModal";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { cleanObject } from "../utils/textUtils";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 
 const Finalization = () => {
   const navigate = useNavigate();
@@ -18,6 +27,9 @@ const Finalization = () => {
   const [uploadedData, setUploadedData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("");
+
+  // Modal state
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -60,10 +72,7 @@ const Finalization = () => {
 
     fileReader.onload = async (event) => {
       try {
-        let jsonData = JSON.parse(event.target.result);
-
-        // ✅ Clean the data
-        jsonData = cleanObject(jsonData);
+        const jsonData = JSON.parse(event.target.result);
 
         // Upload to backend
         const formData = new FormData();
@@ -121,8 +130,15 @@ const Finalization = () => {
     setUploadedData(null);
     setCategories([]);
     setActiveCategory("");
+    setStatusModalOpen(false);
     document.getElementById("file-input").value = "";
   };
+
+  // Count final notes
+  const finalNotesCount =
+    uploadedData?.raw_json?.finalisation?.Note_Extraction?.filter(
+      (item) => item.status && item.status.includes("Note - Final")
+    ).length || 0;
 
   // If data is uploaded, show split view
   if (uploadedData) {
@@ -159,14 +175,35 @@ const Finalization = () => {
               {uploadedData.documentName}
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => navigate("/dashboard")}
-            sx={{ textTransform: "none", bgcolor: "#0f62fe" }}
-          >
-            Go to Dashboard
-          </Button>
+
+          {/* Note Extraction Status Button */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {/* <Button
+              variant="outlined"
+              size="small"
+              onClick={() => navigate("/dashboard")}
+              sx={{ textTransform: "none" }}
+            >
+              Dashboard
+            </Button> */}
+            <IconButton
+              color="primary"
+              onClick={() => setStatusModalOpen(true)}
+              sx={{
+                bgcolor: "#e3f2fd",
+                "&:hover": {
+                  bgcolor: "#bbdefb",
+                },
+              }}
+            >
+              <Badge badgeContent={finalNotesCount} color="error">
+                <AssignmentTurnedInIcon />
+              </Badge>
+            </IconButton>
+            {/* <Typography variant="body2" color="text.secondary">
+              Note Extraction Status
+            </Typography> */}
+          </Box>
         </Box>
 
         {/* Split Layout - Full Screen */}
@@ -203,6 +240,13 @@ const Finalization = () => {
             />
           </Box>
         </Box>
+
+        {/* Note Extraction Status Modal */}
+        <NoteExtractionStatusModal
+          open={statusModalOpen}
+          onClose={() => setStatusModalOpen(false)}
+          data={uploadedData?.raw_json}
+        />
       </Box>
     );
   }
