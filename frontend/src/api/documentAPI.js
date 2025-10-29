@@ -26,7 +26,18 @@ export const documentAPI = {
     }
   },
 
-  // ✅ NEW: Get document by filename
+  // ✅ NEW: Get document by ID (alias for clarity)
+  getDocumentById: async (documentId) => {
+    try {
+      const response = await axios.get(`${API_BASE}/get_json/${documentId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching document by ID:", error);
+      throw error;
+    }
+  },
+
+  // Get document by filename
   getDocumentByFilename: async (filename, username = null) => {
     try {
       const params = { filename };

@@ -22,6 +22,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
+import { documentAPI } from "../api/documentAPI";
 
 const Finalization = () => {
   const navigate = useNavigate();
@@ -49,24 +50,36 @@ const Finalization = () => {
 
   // ✅ Check if coming from Dashboard view
   useEffect(() => {
-    if (location.state?.viewMode && location.state?.documentData) {
-      const { documentData, documentName, originalFileName } = location.state;
+    if (location.state?.viewMode && location.state?.fetchedDocument) {
+      const { fetchedDocument, documentName, originalFileName } =
+        location.state;
 
-      console.log("📥 Viewing INPUT data in Finalization:", documentData);
+      console.log("📥 Viewing document from Dashboard:", fetchedDocument);
+
+      // ✅ Determine which data to show (input_data or raw_json)
+      const inputData = fetchedDocument.input_data?.finalisation
+        ? { finalisation: fetchedDocument.input_data.finalisation }
+        : fetchedDocument.raw_json; // Fallback to raw_json for single file uploads
 
       setUploadedData({
         documentName: documentName || "Document",
         originalFileName: originalFileName || "Document.json",
-        input_data: documentData, // ✅ Using INPUT data
+        input_data: inputData, // INPUT data for display
+        raw_json: fetchedDocument.raw_json, // OUTPUT data for summary
       });
 
-      // ✅ Extract categories from input_data.finalisation (INPUT data)
-      if (documentData.finalisation) {
-        const cats = Object.keys(documentData.finalisation);
+      // ✅ Extract categories from input_data or raw_json
+      let cats = [];
+      if (fetchedDocument.input_data?.finalisation) {
+        cats = Object.keys(fetchedDocument.input_data.finalisation);
         console.log("📂 Categories from INPUT (input_data):", cats);
-        setCategories(cats);
-        setActiveCategory(cats[0] || "");
+      } else if (fetchedDocument.raw_json?.finalisation) {
+        cats = Object.keys(fetchedDocument.raw_json.finalisation);
+        console.log("📂 Categories from OUTPUT (raw_json):", cats);
       }
+
+      setCategories(cats);
+      setActiveCategory(cats[0] || "");
     }
   }, [location.state]);
 
@@ -136,9 +149,36 @@ const Finalization = () => {
         console.log("✅ Single file upload success:", res.data);
         alert("File uploaded successfully!");
 
-        // Navigate to dashboard after upload
+        // ✅ FIX: Fetch uploaded document and display it
+        const uploadedDoc = await documentAPI.getDocumentById(
+          res.data.inserted_id
+        );
+
+        console.log("📥 Fetched uploaded document:", uploadedDoc);
+
+        // ✅ Set uploaded data to display INPUT
+        setUploadedData({
+          documentName: uploadedDoc.finalization_document_name || "Document",
+          originalFileName: uploadedDoc.original_filename || "Document.json",
+          input_data: uploadedDoc.raw_json, // For single file, raw_json is the data
+          raw_json: uploadedDoc.raw_json, // For summary view
+        });
+
+        // ✅ Extract categories from raw_json.finalisation
+        if (uploadedDoc.raw_json?.finalisation) {
+          const cats = Object.keys(uploadedDoc.raw_json.finalisation);
+          console.log("📂 Categories extracted:", cats);
+          setCategories(cats);
+          setActiveCategory(cats[0] || "");
+        }
+
+        // Notify dashboard in background
         window.dispatchEvent(new Event("documentUploaded"));
-        navigate("/dashboard");
+
+        // ✅ Reset upload form
+        setDocName("");
+        setSelectedFile(null);
+        document.getElementById("file-input").value = "";
       } catch (err) {
         console.error("❌ Upload failed:", err);
         alert(err.response?.data?.detail || "Upload failed. Check console.");
@@ -162,11 +202,14 @@ const Finalization = () => {
     const files = Array.from(e.target.files);
     setInputFiles(files);
 
-    if (!folderDocName && files.length > 0) {
+    // ✅ Auto-extract folder name and set it
+    if (files.length > 0) {
       const path = files[0].webkitRelativePath;
       const parts = path.split("/");
       if (parts.length >= 2) {
-        setFolderDocName(parts[1]);
+        const extractedFolderName = parts[1]; // Second part is the folder name
+        setFolderDocName(extractedFolderName);
+        console.log("📁 Auto-extracted folder name:", extractedFolderName);
       }
     }
   };
@@ -176,9 +219,13 @@ const Finalization = () => {
     if (file && file.name.endsWith(".json")) {
       setOutputFile(file);
 
+      // ✅ Only extract from filename if no name set yet
       if (!folderDocName) {
-        const extractedName = file.name.replace("_final.json", "");
+        const extractedName = file.name
+          .replace("_final.json", "")
+          .replace(".json", "");
         setFolderDocName(extractedName);
+        console.log("📄 Auto-extracted from filename:", extractedName);
       }
     } else {
       alert("Please select a valid JSON file");
@@ -186,9 +233,28 @@ const Finalization = () => {
   };
 
   const handleFolderUpload = async () => {
-    if (!folderDocName.trim()) {
-      alert("Please enter a document name");
-      return;
+    // ✅ Auto-extract document name if user didn't enter one
+    let finalDocName = folderDocName.trim();
+
+    if (!finalDocName && inputFiles.length > 0) {
+      const path = inputFiles[0].webkitRelativePath;
+      const parts = path.split("/");
+      if (parts.length >= 2) {
+        finalDocName = parts[1]; // Use folder name
+        console.log("📁 Using auto-extracted folder name:", finalDocName);
+      }
+    }
+
+    if (!finalDocName && outputFile) {
+      finalDocName = outputFile.name
+        .replace("_final.json", "")
+        .replace(".json", "");
+      console.log("📄 Using filename as document name:", finalDocName);
+    }
+
+    if (!finalDocName) {
+      finalDocName = "Document"; // Final fallback
+      console.log("📝 Using default name: Document");
     }
 
     if (inputFiles.length === 0) {
@@ -216,7 +282,7 @@ const Finalization = () => {
       const formData = new FormData();
       formData.append("username", username);
       formData.append("email", email);
-      formData.append("finalization_document_name", folderDocName.trim());
+      formData.append("finalization_document_name", finalDocName); // ✅ Use auto-extracted or entered name
 
       inputFiles.forEach((file) => {
         formData.append(
@@ -247,16 +313,45 @@ const Finalization = () => {
       console.log("✅ Folder upload success:", res.data);
       alert("Folder uploaded successfully!");
 
-      // Reset form
+      // ✅ FIX: Fetch the uploaded document and display it
+      const uploadedDoc = await documentAPI.getDocumentById(
+        res.data.inserted_id
+      );
+
+      console.log("📥 Fetched uploaded document:", uploadedDoc);
+
+      // ✅ Set uploaded data to display INPUT data
+      setUploadedData({
+        documentName: uploadedDoc.finalization_document_name || "Document",
+        originalFileName: uploadedDoc.original_filename || "Document.json",
+        input_data: uploadedDoc.input_data?.finalisation
+          ? { finalisation: uploadedDoc.input_data.finalisation }
+          : uploadedDoc.raw_json,
+        raw_json: uploadedDoc.raw_json,
+      });
+
+      // ✅ Extract categories from INPUT data
+      if (uploadedDoc.input_data?.finalisation) {
+        const cats = Object.keys(uploadedDoc.input_data.finalisation);
+        console.log("📂 Categories from INPUT:", cats);
+        setCategories(cats);
+        setActiveCategory(cats[0] || "");
+      } else if (uploadedDoc.raw_json?.finalisation) {
+        const cats = Object.keys(uploadedDoc.raw_json.finalisation);
+        console.log("📂 Categories from OUTPUT:", cats);
+        setCategories(cats);
+        setActiveCategory(cats[0] || "");
+      }
+
+      // Notify dashboard in background
+      window.dispatchEvent(new Event("documentUploaded"));
+
+      // ✅ Reset folder upload form
       setFolderDocName("");
       setInputFiles([]);
       setOutputFile(null);
       document.getElementById("input-folder").value = "";
       document.getElementById("output-file-input").value = "";
-
-      // Refresh dashboard and redirect
-      window.dispatchEvent(new Event("documentUploaded"));
-      navigate("/dashboard");
     } catch (err) {
       console.error("❌ Folder upload failed:", err);
       alert(err.response?.data?.detail || "Upload failed. Check console.");
@@ -367,7 +462,7 @@ const Finalization = () => {
               onClick={() => {
                 navigate("/finalization/summary", {
                   state: {
-                    documentData: uploadedData.input_data,
+                    documentData: uploadedData.raw_json, // ✅ CORRECT - This is OUTPUT data
                     originalFileName: uploadedData.originalFileName,
                     documentName: uploadedData.documentName,
                   },

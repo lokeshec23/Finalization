@@ -97,7 +97,7 @@ const Dashboard = () => {
       navigate("/finalization", {
         state: {
           viewMode: true,
-          documentData: fetchedDoc.raw_json,
+          fetchedDocument: fetchedDoc, // ✅ Pass complete document
           documentName: fetchedDoc.finalization_document_name,
           originalFileName: fetchedDoc.original_filename,
           documentId: fetchedDoc._id,
