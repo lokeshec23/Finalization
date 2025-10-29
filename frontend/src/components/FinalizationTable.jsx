@@ -12,15 +12,23 @@ import {
   Chip,
 } from "@mui/material";
 
-const FinalizationTable = ({ data, title, categoryName }) => {
+const FinalizationTable = ({
+  data,
+  title,
+  categoryName,
+  isDynamic = false,
+}) => {
   if (!data || data.length === 0) {
     return (
       <Paper
         elevation={3}
         sx={{
-          mb: 2,
+          mb: isDynamic ? 0 : 2,
           border: "1px solid #e0e0e0",
           borderRadius: 2,
+          height: isDynamic ? "100%" : "auto",
+          display: isDynamic ? "flex" : "block",
+          flexDirection: isDynamic ? "column" : "initial",
         }}
       >
         <Box
@@ -54,7 +62,9 @@ const FinalizationTable = ({ data, title, categoryName }) => {
             }}
           />
         </Box>
-        <Box sx={{ textAlign: "center", py: 3 }}>
+        <Box
+          sx={{ textAlign: "center", py: 3, flex: isDynamic ? 1 : "initial" }}
+        >
           <Typography variant="body2" color="text.secondary">
             No data available
           </Typography>
@@ -110,10 +120,13 @@ const FinalizationTable = ({ data, title, categoryName }) => {
     <Paper
       elevation={3}
       sx={{
-        mb: 2,
+        mb: isDynamic ? 0 : 2,
         border: "1px solid #e0e0e0",
         borderRadius: 2,
         overflow: "hidden",
+        height: isDynamic ? "100%" : "auto",
+        display: isDynamic ? "flex" : "block",
+        flexDirection: isDynamic ? "column" : "initial",
       }}
     >
       {/* Table Header - Very Compact */}
@@ -126,6 +139,7 @@ const FinalizationTable = ({ data, title, categoryName }) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexShrink: 0,
         }}
       >
         <Typography
@@ -150,7 +164,8 @@ const FinalizationTable = ({ data, title, categoryName }) => {
       {/* Table Content - Scrollable with Sticky Header */}
       <TableContainer
         sx={{
-          maxHeight: 450,
+          maxHeight: isDynamic ? "100%" : "450px",
+          flex: isDynamic ? 1 : "initial",
           overflowY: "auto",
           overflowX: "auto",
           "&::-webkit-scrollbar": {
@@ -173,13 +188,14 @@ const FinalizationTable = ({ data, title, categoryName }) => {
           <TableHead>
             <TableRow>
               <TableCell
+                align="left"
                 sx={{
                   fontWeight: 700,
                   bgcolor: "#f8f9fa",
                   borderBottom: "2px solid #0f62fe",
                   width: "45px",
-                  py: 0.5,
-                  px: 1,
+                  py: 1,
+                  px: 1.5,
                   fontSize: "0.75rem",
                   position: "sticky",
                   top: 0,
@@ -191,13 +207,14 @@ const FinalizationTable = ({ data, title, categoryName }) => {
               {headers.map((header) => (
                 <TableCell
                   key={header}
+                  align="left"
                   sx={{
                     fontWeight: 700,
                     bgcolor: "#f8f9fa",
                     borderBottom: "2px solid #0f62fe",
                     minWidth: 130,
-                    py: 0.5,
-                    px: 1,
+                    py: 1,
+                    px: 1.5,
                     fontSize: "0.75rem",
                     position: "sticky",
                     top: 0,
@@ -224,11 +241,12 @@ const FinalizationTable = ({ data, title, categoryName }) => {
                 }}
               >
                 <TableCell
+                  align="left"
                   sx={{
                     fontWeight: 600,
                     color: "#0f62fe",
-                    py: 0.75,
-                    px: 1,
+                    py: 1.5,
+                    px: 2,
                     fontSize: "0.8rem",
                     borderRight: "1px solid #e0e0e0",
                   }}
@@ -238,16 +256,17 @@ const FinalizationTable = ({ data, title, categoryName }) => {
                 {headers.map((header) => (
                   <TableCell
                     key={header}
+                    align="left"
                     sx={{
                       fontSize: "0.8rem",
-                      py: 0.75,
-                      px: 1,
+                      py: 1.5,
+                      px: 2,
                       maxWidth: 250,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
-                    title={formatValue(row[header])} // Tooltip on hover
+                    title={formatValue(row[header])}
                   >
                     {formatValue(row[header])}
                   </TableCell>
