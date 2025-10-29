@@ -9,15 +9,51 @@ import {
   Paper,
   Typography,
   Box,
+  Chip,
 } from "@mui/material";
 
 const FinalizationTable = ({ data, title, categoryName }) => {
   if (!data || data.length === 0) {
     return (
-      <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-          {title}
-        </Typography>
+      <Paper
+        elevation={3}
+        sx={{
+          mb: 2,
+          border: "1px solid #e0e0e0",
+          borderRadius: 2,
+        }}
+      >
+        <Box
+          sx={{
+            px: 1.5,
+            py: 0.75,
+            bgcolor: "#0f62fe",
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderTopLeftRadius: 8,
+            borderTopRightRadius: 8,
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            sx={{ fontWeight: 600, fontSize: "0.85rem" }}
+          >
+            {title}
+          </Typography>
+          <Chip
+            label="0 records"
+            size="small"
+            sx={{
+              bgcolor: "white",
+              color: "#0f62fe",
+              fontWeight: 700,
+              height: 20,
+              fontSize: "0.7rem",
+            }}
+          />
+        </Box>
         <Box sx={{ textAlign: "center", py: 3 }}>
           <Typography variant="body2" color="text.secondary">
             No data available
@@ -71,11 +107,20 @@ const FinalizationTable = ({ data, title, categoryName }) => {
   };
 
   return (
-    <Paper elevation={2} sx={{ mb: 3, overflow: "hidden" }}>
-      {/* Table Header */}
+    <Paper
+      elevation={3}
+      sx={{
+        mb: 2,
+        border: "1px solid #e0e0e0",
+        borderRadius: 2,
+        overflow: "hidden",
+      }}
+    >
+      {/* Table Header - Very Compact */}
       <Box
         sx={{
-          p: 2,
+          px: 1.5,
+          py: 0.75,
           bgcolor: "#0f62fe",
           color: "white",
           display: "flex",
@@ -83,25 +128,62 @@ const FinalizationTable = ({ data, title, categoryName }) => {
           justifyContent: "space-between",
         }}
       >
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+        <Typography
+          variant="subtitle2"
+          sx={{ fontWeight: 600, fontSize: "0.85rem" }}
+        >
           {title}
         </Typography>
-        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-          {data.length} record{data.length !== 1 ? "s" : ""}
-        </Typography>
+        <Chip
+          label={`${data.length} record${data.length !== 1 ? "s" : ""}`}
+          size="small"
+          sx={{
+            bgcolor: "white",
+            color: "#0f62fe",
+            fontWeight: 700,
+            height: 20,
+            fontSize: "0.7rem",
+          }}
+        />
       </Box>
 
-      {/* Table Content */}
-      <TableContainer sx={{ maxHeight: 400 }}>
+      {/* Table Content - Scrollable with Sticky Header */}
+      <TableContainer
+        sx={{
+          maxHeight: 450,
+          overflowY: "auto",
+          overflowX: "auto",
+          "&::-webkit-scrollbar": {
+            width: "8px",
+            height: "8px",
+          },
+          "&::-webkit-scrollbar-track": {
+            bgcolor: "#f1f1f1",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            bgcolor: "#888",
+            borderRadius: "4px",
+            "&:hover": {
+              bgcolor: "#555",
+            },
+          },
+        }}
+      >
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
               <TableCell
                 sx={{
                   fontWeight: 700,
-                  bgcolor: "#f4f4f4",
-                  borderBottom: "2px solid #e0e0e0",
-                  width: "60px",
+                  bgcolor: "#f8f9fa",
+                  borderBottom: "2px solid #0f62fe",
+                  width: "45px",
+                  py: 0.5,
+                  px: 1,
+                  fontSize: "0.75rem",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 10,
                 }}
               >
                 S.No
@@ -111,9 +193,15 @@ const FinalizationTable = ({ data, title, categoryName }) => {
                   key={header}
                   sx={{
                     fontWeight: 700,
-                    bgcolor: "#f4f4f4",
-                    borderBottom: "2px solid #e0e0e0",
-                    minWidth: 150,
+                    bgcolor: "#f8f9fa",
+                    borderBottom: "2px solid #0f62fe",
+                    minWidth: 130,
+                    py: 0.5,
+                    px: 1,
+                    fontSize: "0.75rem",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 10,
                   }}
                 >
                   {formatKey(header)}
@@ -123,20 +211,43 @@ const FinalizationTable = ({ data, title, categoryName }) => {
           </TableHead>
           <TableBody>
             {data.map((row, index) => (
-              <TableRow key={index} hover>
-                <TableCell sx={{ fontWeight: 600, color: "#616161" }}>
+              <TableRow
+                key={index}
+                hover
+                sx={{
+                  "&:nth-of-type(odd)": {
+                    bgcolor: "#fafafa",
+                  },
+                  "&:hover": {
+                    bgcolor: "#e3f2fd !important",
+                  },
+                }}
+              >
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: "#0f62fe",
+                    py: 0.75,
+                    px: 1,
+                    fontSize: "0.8rem",
+                    borderRight: "1px solid #e0e0e0",
+                  }}
+                >
                   {index + 1}
                 </TableCell>
                 {headers.map((header) => (
                   <TableCell
                     key={header}
                     sx={{
-                      fontSize: "0.875rem",
-                      maxWidth: 300,
+                      fontSize: "0.8rem",
+                      py: 0.75,
+                      px: 1,
+                      maxWidth: 250,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={formatValue(row[header])} // Tooltip on hover
                   >
                     {formatValue(row[header])}
                   </TableCell>

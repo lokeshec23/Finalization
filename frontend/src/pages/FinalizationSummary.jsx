@@ -10,8 +10,12 @@ import {
   ListItemText,
   Button,
   Chip,
+  IconButton,
+  Divider,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import FinalizationTable from "../components/FinalizationTable";
 
 const FinalizationSummary = () => {
@@ -22,27 +26,24 @@ const FinalizationSummary = () => {
   const [activeCategory, setActiveCategory] = useState("");
   const [documentData, setDocumentData] = useState(null);
   const [documentName, setDocumentName] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
-    // Get data from location state
     if (location.state?.documentData) {
       const data = location.state.documentData;
       setDocumentData(data);
       setDocumentName(location.state.originalFileName || "Document");
 
-      // Extract categories
       if (data.finalisation) {
         const cats = Object.keys(data.finalisation);
         setCategories(cats);
         setActiveCategory(cats[0] || "");
       }
     } else {
-      // No data, redirect back
       navigate("/finalization");
     }
   }, [location.state, navigate]);
 
-  // Get Note_Extraction data with status "Note - Final"
   const getFinalNotes = () => {
     if (!documentData?.finalisation?.Note_Extraction) {
       return [];
@@ -52,7 +53,6 @@ const FinalizationSummary = () => {
     );
   };
 
-  // Get data for selected category
   const getCategoryData = () => {
     if (!documentData?.finalisation || !activeCategory) {
       return [];
@@ -62,6 +62,10 @@ const FinalizationSummary = () => {
 
   const formatCategoryName = (category) => {
     return category.replace(/_/g, " ");
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   const finalNotes = getFinalNotes();
@@ -75,7 +79,7 @@ const FinalizationSummary = () => {
       <Box
         sx={{
           px: 3,
-          py: 2,
+          py: 1.5,
           bgcolor: "#fff",
           borderBottom: "1px solid #e0e0e0",
           display: "flex",
@@ -93,35 +97,42 @@ const FinalizationSummary = () => {
           >
             Back
           </Button>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "1rem" }}>
             📄 {documentName}
           </Typography>
         </Box>
         <Chip
           label="Finalization Summary"
           color="primary"
-          sx={{ fontWeight: 600 }}
+          sx={{ fontWeight: 600, height: 28 }}
         />
       </Box>
 
       {/* Split Layout */}
-      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* Left Sidebar - Categories */}
+      <Box
+        sx={{
+          display: "flex",
+          flex: 1,
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {/* Left Sidebar - Collapsible */}
         <Paper
           elevation={0}
           sx={{
-            width: "25%",
-            minWidth: 250,
-            maxWidth: 350,
-            borderRight: "1px solid #e0e0e0",
+            width: sidebarOpen ? "280px" : "0px",
+            minWidth: sidebarOpen ? "280px" : "0px",
+            borderRight: sidebarOpen ? "1px solid #e0e0e0" : "none",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            transition: "all 0.3s ease",
           }}
         >
           <Box
             sx={{
-              p: 2,
+              p: 1.5,
               bgcolor: "#0f62fe",
               color: "white",
               display: "flex",
@@ -129,7 +140,10 @@ const FinalizationSummary = () => {
               justifyContent: "space-between",
             }}
           >
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, fontSize: "0.95rem" }}
+            >
               Categories
             </Typography>
             <Chip
@@ -139,53 +153,85 @@ const FinalizationSummary = () => {
                 bgcolor: "white",
                 color: "#0f62fe",
                 fontWeight: 700,
-                height: 24,
+                height: 22,
               }}
             />
           </Box>
 
           <List sx={{ overflow: "auto", flex: 1, p: 1 }}>
-            {categories.map((category) => (
-              <ListItemButton
-                key={category}
-                selected={activeCategory === category}
-                onClick={() => setActiveCategory(category)}
-                sx={{
-                  mb: 0.5,
-                  borderRadius: 1,
-                  borderLeft:
-                    activeCategory === category
-                      ? "4px solid #0f62fe"
-                      : "4px solid transparent",
-                  "&.Mui-selected": {
-                    bgcolor: "#e3f2fd",
-                    "&:hover": {
-                      bgcolor: "#bbdefb",
-                    },
-                  },
-                }}
-              >
-                <ListItemText
-                  primary={formatCategoryName(category)}
+            {categories.map((category, index) => (
+              <React.Fragment key={category}>
+                <ListItemButton
+                  selected={activeCategory === category}
+                  onClick={() => setActiveCategory(category)}
                   sx={{
-                    "& .MuiListItemText-primary": {
-                      fontWeight: activeCategory === category ? 600 : 400,
-                      fontSize: "0.95rem",
+                    borderRadius: 1,
+                    mb: 0.5,
+                    py: 1,
+                    borderLeft:
+                      activeCategory === category
+                        ? "4px solid #0f62fe"
+                        : "4px solid transparent",
+                    "&.Mui-selected": {
+                      bgcolor: "#e3f2fd",
+                      "&:hover": {
+                        bgcolor: "#bbdefb",
+                      },
                     },
                   }}
-                />
-              </ListItemButton>
+                >
+                  <ListItemText
+                    primary={formatCategoryName(category)}
+                    sx={{
+                      "& .MuiListItemText-primary": {
+                        fontWeight: activeCategory === category ? 600 : 400,
+                        fontSize: "0.875rem",
+                      },
+                    }}
+                  />
+                </ListItemButton>
+                {index < categories.length - 1 && <Divider sx={{ my: 0.5 }} />}
+              </React.Fragment>
             ))}
           </List>
         </Paper>
+
+        {/* Toggle Sidebar Button - Small Size */}
+        <IconButton
+          onClick={toggleSidebar}
+          size="small"
+          sx={{
+            position: "absolute",
+            left: sidebarOpen ? "268px" : "0px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 1000,
+            bgcolor: "#0f62fe",
+            color: "white",
+            width: 24,
+            height: 48,
+            borderRadius: sidebarOpen ? "0 6px 6px 0" : "0 6px 6px 0",
+            transition: "all 0.3s ease",
+            "&:hover": {
+              bgcolor: "#0353e9",
+              width: 28,
+            },
+            "& .MuiSvgIcon-root": {
+              fontSize: "1rem",
+            },
+          }}
+        >
+          {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+        </IconButton>
 
         {/* Right Side - Tables */}
         <Box
           sx={{
             flex: 1,
             overflow: "auto",
-            bgcolor: "#fafafa",
-            p: 3,
+            bgcolor: "#f8f9fa",
+            p: 2,
+            transition: "all 0.3s ease",
           }}
         >
           {/* First Table - Note Final */}
@@ -206,7 +252,15 @@ const FinalizationSummary = () => {
 
           {/* Empty State */}
           {!activeCategory && (
-            <Paper elevation={2} sx={{ p: 5, textAlign: "center" }}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 5,
+                textAlign: "center",
+                borderRadius: 2,
+                border: "2px dashed #e0e0e0",
+              }}
+            >
               <Typography variant="h6" color="text.secondary" gutterBottom>
                 Select a Category
               </Typography>
