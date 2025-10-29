@@ -61,7 +61,6 @@ const Dashboard = () => {
     }
   };
 
-  // ✅ UPDATED: Fetch by filename and navigate
   const handleView = async (doc) => {
     try {
       setViewLoading(true);
@@ -73,7 +72,6 @@ const Dashboard = () => {
         return;
       }
 
-      // Fetch the document by filename
       const fetchedDoc = await documentAPI.getDocumentByFilename(
         filename,
         username
@@ -81,7 +79,6 @@ const Dashboard = () => {
 
       console.log("✅ Fetched document:", fetchedDoc);
 
-      // Navigate to finalization with the data
       navigate("/finalization", {
         state: {
           viewMode: true,
@@ -200,13 +197,19 @@ const Dashboard = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: "#f4f4f4" }}>
-                <TableCell sx={{ fontWeight: 700 }}>S.No</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>File Name</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Document Name</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Uploaded By</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Upload Date</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700 }}>
+                <TableCell sx={{ fontWeight: 700, width: "10%" }}>
+                  S.No
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, width: "50%" }}>
+                  File Name
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, width: "20%" }}>
+                  Upload Date
+                </TableCell>
+                <TableCell
+                  align="center"
+                  sx={{ fontWeight: 700, width: "20%" }}
+                >
                   Actions
                 </TableCell>
               </TableRow>
@@ -214,7 +217,7 @@ const Dashboard = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                  <TableCell colSpan={4} align="center" sx={{ py: 5 }}>
                     <CircularProgress size={30} />
                     <Typography variant="body2" sx={{ mt: 2 }}>
                       Loading documents...
@@ -223,7 +226,7 @@ const Dashboard = () => {
                 </TableRow>
               ) : documents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                  <TableCell colSpan={4} align="center" sx={{ py: 5 }}>
                     <Typography
                       variant="h6"
                       color="text.secondary"
@@ -250,13 +253,6 @@ const Dashboard = () => {
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {doc.finalization_document_name || "—"}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{doc.username || "—"}</TableCell>
-                    <TableCell>{doc.email || "—"}</TableCell>
                     <TableCell>{formatDate(doc)}</TableCell>
                     <TableCell align="center">
                       <Box
