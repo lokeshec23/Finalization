@@ -211,8 +211,33 @@ const Finalization = () => {
             </Box>
           </Box>
 
-          {/* Note Extraction Status Button */}
+          {/* Right Side Buttons */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {/* View Finalization Button */}
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => {
+                navigate("/finalization/summary", {
+                  state: {
+                    documentData: uploadedData.raw_json,
+                    originalFileName: uploadedData.originalFileName,
+                    documentName: uploadedData.documentName,
+                  },
+                });
+              }}
+              sx={{
+                textTransform: "none",
+                bgcolor: "#28a745",
+                "&:hover": {
+                  bgcolor: "#218838",
+                },
+              }}
+            >
+              View Finalization
+            </Button>
+
+            {/* Note Extraction Status */}
             <IconButton
               color="primary"
               onClick={() => setStatusModalOpen(true)}
@@ -227,9 +252,9 @@ const Finalization = () => {
                 <AssignmentTurnedInIcon />
               </Badge>
             </IconButton>
-            {/* <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary">
               Note Extraction Status
-            </Typography> */}
+            </Typography>
           </Box>
         </Box>
 
