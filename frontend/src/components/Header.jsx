@@ -96,6 +96,28 @@ const Header = () => {
           >
             Filter
           </Button>
+          <Button
+            color="inherit"
+            sx={{
+              textTransform: "none",
+              borderBottom:
+                location.pathname === "/loan-upload"
+                  ? "2px solid #0f62fe"
+                  : "2px solid transparent",
+              borderRadius: 0,
+              fontWeight: location.pathname === "/loan-upload" ? 600 : 500,
+              color:
+                location.pathname === "/loan-upload" ? "#0f62fe" : "inherit",
+              px: 2,
+              "&:hover": {
+                borderBottom: "2px solid #0f62fe",
+                bgcolor: "rgba(15, 98, 254, 0.04)",
+              },
+            }}
+            onClick={() => navigate("/loan-upload")}
+          >
+            Loan Upload
+          </Button>
         </Box>
 
         {/* Right - Avatar */}

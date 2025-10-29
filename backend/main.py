@@ -5,6 +5,7 @@ from fastapi import FastAPI, UploadFile, Form, HTTPException, File
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 from datetime import datetime
+from typing import List, Optional
 import json, os, traceback
 
 # Load .env
@@ -29,7 +30,51 @@ print(f"Connecting to database: {database_url} | DB Name: {db_name}")
 client = AsyncIOMotorClient(database_url)
 db = client[db_name]
 upload_json_collection = db["uploadedJSON"]
-filtered_key_collection = db["filteredKey"]  # ✅ New collection
+filtered_key_collection = db["filteredKey"]
+
+# ✅ Helper function to transform input JSON structure
+def transform_input_json(raw_data):
+    """
+    Transform input JSON from Summary->Labels structure to flat key-value pairs
+    """
+    try:
+        transformed = {}
+        
+        # Preserve metadata
+        if "Title" in raw_data:
+            transformed["title"] = raw_data["Title"]
+        if "Url" in raw_data:
+            transformed["url"] = raw_data["Url"]
+        if "StageName" in raw_data:
+            transformed["stage_name"] = raw_data["StageName"]
+        if "GeneratedOn" in raw_data:
+            transformed["generated_on"] = raw_data["GeneratedOn"]
+        
+        # Process Summary -> Labels
+        if "Summary" in raw_data and isinstance(raw_data["Summary"], list):
+            for summary_item in raw_data["Summary"]:
+                if "Labels" in summary_item and isinstance(summary_item["Labels"], list):
+                    for label in summary_item["Labels"]:
+                        label_name = label.get("LabelName", "Unknown")
+                        values_array = label.get("Values", [])
+                        
+                        # Extract just the "Value" field from each value object
+                        extracted_values = [
+                            v.get("Value", "") for v in values_array 
+                            if isinstance(v, dict) and "Value" in v
+                        ]
+                        
+                        # Join multiple values with comma or take first value
+                        if len(extracted_values) > 0:
+                            transformed[label_name.lower().replace(" ", "_")] = ", ".join(extracted_values) if len(extracted_values) > 1 else extracted_values[0]
+                        else:
+                            transformed[label_name.lower().replace(" ", "_")] = ""
+        
+        return transformed
+    except Exception as e:
+        print(f"Error transforming JSON: {e}")
+        return raw_data
+
 
 # ✅ Helper function to update filter keys
 async def update_filter_keys(raw_json):
@@ -38,24 +83,18 @@ async def update_filter_keys(raw_json):
         if not raw_json or "finalisation" not in raw_json:
             return
         
-        # Get existing filter keys document
         filter_doc = await filtered_key_collection.find_one({"_id": "filter_keys"})
-        
-        # Extract new keys from uploaded JSON
         new_keys = list(raw_json["finalisation"].keys())
         
         if filter_doc:
-            # Existing document - merge keys without duplicates
             existing_keys = filter_doc.get("keys", [])
             merged_keys = list(set(existing_keys + new_keys))
-            
             await filtered_key_collection.update_one(
                 {"_id": "filter_keys"},
                 {"$set": {"keys": merged_keys}}
             )
             print(f"✅ Updated filter keys: {merged_keys}")
         else:
-            # First time - create new document
             await filtered_key_collection.insert_one({
                 "_id": "filter_keys",
                 "keys": new_keys
@@ -66,59 +105,166 @@ async def update_filter_keys(raw_json):
         print(f"Error updating filter keys: {e}")
 
 
+# ✅ UPDATED: Upload both single JSON and folder structure
 @app.post("/upload_json")
 async def upload_json(
     username: str = Form(...),
     email: str = Form(...),
     finalization_document_name: str = Form(...),
-    json_file: UploadFile = File(...)
+    json_file: UploadFile = File(None),
+    input_files: List[UploadFile] = File(None),
+    output_file: UploadFile = File(None)
 ):
+    """
+    Handles both:
+    1. Single JSON file upload (original functionality)
+    2. Folder structure upload (input files + output file)
+    """
     try:
-        if not json_file or not json_file.filename:
-            raise HTTPException(status_code=400, detail="No file provided")
-
-        file_content = await json_file.read()
-        
-        print(f"Received file: {json_file.filename}, size: {len(file_content)} bytes")
-        
-        # Try multiple encodings
-        raw_json = None
         encodings = ['utf-8', 'utf-8-sig', 'windows-1252', 'latin-1', 'iso-8859-1']
         
-        for encoding in encodings:
-            try:
-                decoded_content = file_content.decode(encoding)
-                raw_json = json.loads(decoded_content)
-                print(f"✅ Successfully decoded with: {encoding}")
-                break
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                continue
+        # ===== CASE 1: Single JSON File Upload (Original) =====
+        if json_file and not input_files and not output_file:
+            print(f"📄 Single file upload: {json_file.filename}")
+            
+            file_content = await json_file.read()
+            raw_json = None
+            
+            for encoding in encodings:
+                try:
+                    decoded_content = file_content.decode(encoding)
+                    raw_json = json.loads(decoded_content)
+                    print(f"✅ Successfully decoded with: {encoding}")
+                    break
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    continue
+            
+            if raw_json is None:
+                raise HTTPException(status_code=400, detail="Could not decode JSON file")
+
+            await update_filter_keys(raw_json)
+
+            document = {
+                "username": username,
+                "email": email,
+                "finalization_document_name": finalization_document_name,
+                "original_filename": json_file.filename,
+                "raw_json": raw_json,
+                "upload_date": datetime.utcnow(),
+                "upload_type": "single_file"
+            }
+
+            result = await upload_json_collection.insert_one(document)
+            print(f"✅ Single file inserted with ID: {result.inserted_id}")
+
+            return {
+                "message": "File saved successfully!",
+                "inserted_id": str(result.inserted_id),
+                "filename": json_file.filename,
+                "upload_type": "single_file"
+            }
         
-        if raw_json is None:
-            raise HTTPException(status_code=400, detail="Could not decode JSON file with any supported encoding")
-
-        # ✅ Update filter keys collection
-        await update_filter_keys(raw_json)
-
-        document = {
-            "username": username,
-            "email": email,
-            "finalization_document_name": finalization_document_name,
-            "original_filename": json_file.filename,
-            "raw_json": raw_json,
-            "upload_date": datetime.utcnow()
-        }
-
-        result = await upload_json_collection.insert_one(document)
-
-        print(f"✅ Document inserted with ID: {result.inserted_id}")
-
-        return {
-            "message": "File saved successfully!",
-            "inserted_id": str(result.inserted_id),
-            "filename": json_file.filename
-        }
-
+        # ===== CASE 2: Folder Structure Upload (Input + Output) =====
+        elif input_files and output_file:
+            print(f"📁 Folder upload: {finalization_document_name}")
+            
+            # Process Input Files into finalisation structure
+            input_finalisation = {}
+            
+            for uploaded_file in input_files:
+                # Extract category from file path
+                file_path = uploaded_file.filename
+                parts = file_path.split('/')
+                
+                if len(parts) >= 2:
+                    category = parts[-2]  # Second to last part is category (1003, Credit_Report, etc.)
+                    filename = parts[-1]
+                else:
+                    category = "Uncategorized"
+                    filename = uploaded_file.filename
+                
+                # Read and parse JSON
+                file_content = await uploaded_file.read()
+                raw_json = None
+                
+                for encoding in encodings:
+                    try:
+                        decoded_content = file_content.decode(encoding)
+                        raw_json = json.loads(decoded_content)
+                        break
+                    except (UnicodeDecodeError, json.JSONDecodeError):
+                        continue
+                
+                if raw_json is None:
+                    print(f"⚠️ Could not decode {filename}, skipping...")
+                    continue
+                
+                # Transform the JSON structure
+                transformed_data = transform_input_json(raw_json)
+                
+                # Add filename to transformed data
+                transformed_data["filename"] = filename
+                
+                # Add to category array
+                if category not in input_finalisation:
+                    input_finalisation[category] = []
+                
+                input_finalisation[category].append(transformed_data)
+                
+                print(f"✅ Processed {category}/{filename}")
+            
+            # Process Output File
+            output_content = await output_file.read()
+            output_json = None
+            
+            for encoding in encodings:
+                try:
+                    decoded_content = output_content.decode(encoding)
+                    output_json = json.loads(decoded_content)
+                    print(f"✅ Decoded output file with: {encoding}")
+                    break
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    continue
+            
+            if output_json is None:
+                raise HTTPException(status_code=400, detail="Could not decode output JSON file")
+            
+            # Update filter keys from both input and output
+            temp_input_structure = {"finalisation": input_finalisation}
+            await update_filter_keys(temp_input_structure)
+            await update_filter_keys(output_json)
+            
+            # Create combined document
+            document = {
+                "username": username,
+                "email": email,
+                "finalization_document_name": finalization_document_name,
+                "original_filename": output_file.filename,
+                "input_data": {
+                    "finalisation": input_finalisation  # ✅ Structured like output
+                },
+                "raw_json": output_json,  # Output data (for compatibility)
+                "upload_date": datetime.utcnow(),
+                "upload_type": "folder_structure",
+                "input_categories": list(input_finalisation.keys()),
+                "total_input_files": sum(len(files) for files in input_finalisation.values())
+            }
+            
+            result = await upload_json_collection.insert_one(document)
+            print(f"✅ Folder structure inserted with ID: {result.inserted_id}")
+            
+            return {
+                "message": "Folder uploaded successfully!",
+                "inserted_id": str(result.inserted_id),
+                "filename": output_file.filename,
+                "upload_type": "folder_structure",
+                "input_categories": list(input_finalisation.keys()),
+                "total_input_files": sum(len(files) for files in input_finalisation.values())
+            }
+        
+        else:
+            raise HTTPException(status_code=400, detail="Invalid upload: Provide either single JSON file or input+output files")
+    
     except HTTPException:
         raise
     except Exception as e:
@@ -127,7 +273,8 @@ async def upload_json(
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 
-# ✅ Get all filter keys
+# ===== EXISTING ENDPOINTS (Keep as is) =====
+
 @app.get("/filter_keys")
 async def get_filter_keys():
     try:
@@ -144,12 +291,16 @@ async def get_filter_keys():
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 
-# ✅ Get documents by category
 @app.get("/documents_by_category")
 async def get_documents_by_category(category: str, username: str = None):
     try:
-        # Build query to find documents that have this category in raw_json.finalisation
-        query = {f"raw_json.finalisation.{category}": {"$exists": True}}
+        # Query both old structure and new structure
+        query = {
+            "$or": [
+                {f"raw_json.finalisation.{category}": {"$exists": True}},
+                {f"input_data.finalisation.{category}": {"$exists": True}}
+            ]
+        }
         
         if username:
             query["username"] = username
@@ -157,16 +308,22 @@ async def get_documents_by_category(category: str, username: str = None):
         cursor = upload_json_collection.find(query).sort("_id", -1)
         documents = await cursor.to_list(length=100)
         
-        # Convert ObjectId to string and prepare response
         result = []
         for doc in documents:
+            # Check if it's input_data or raw_json
+            if "input_data" in doc and "finalisation" in doc["input_data"]:
+                category_data = doc["input_data"]["finalisation"].get(category, [])
+            else:
+                category_data = doc.get("raw_json", {}).get("finalisation", {}).get(category, [])
+            
             result.append({
                 "_id": str(doc["_id"]),
                 "original_filename": doc.get("original_filename", "Unknown"),
                 "finalization_document_name": doc.get("finalization_document_name", ""),
                 "username": doc.get("username", ""),
-                "category_data": doc["raw_json"]["finalisation"].get(category, []),
-                "upload_date": doc.get("upload_date")
+                "category_data": category_data,
+                "upload_date": doc.get("upload_date"),
+                "upload_type": doc.get("upload_type", "single_file")
             })
         
         return {"documents": result, "category": category, "count": len(result)}
@@ -177,7 +334,6 @@ async def get_documents_by_category(category: str, username: str = None):
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 
-# Existing endpoints...
 @app.get("/list_json")
 async def list_json(username: str = None):
     try:

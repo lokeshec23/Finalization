@@ -43,8 +43,23 @@ const Dashboard = () => {
   });
   const [viewLoading, setViewLoading] = useState(false);
 
+  // Add this useEffect in your Dashboard component
+
   useEffect(() => {
+    // Initial fetch
     fetchDocuments();
+
+    // Listen for upload events
+    const handleUpload = () => {
+      console.log("Document uploaded, refreshing dashboard...");
+      fetchDocuments();
+    };
+
+    window.addEventListener("documentUploaded", handleUpload);
+
+    return () => {
+      window.removeEventListener("documentUploaded", handleUpload);
+    };
   }, []);
 
   const fetchDocuments = async () => {
