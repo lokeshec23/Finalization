@@ -454,11 +454,10 @@ const Finalization = () => {
               <Typography
                 variant="h6"
                 sx={{ fontWeight: 600, color: "#28a745" }}
-              >
-                📁
-              </Typography>
+              ></Typography>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {uploadedData.originalFileName}
+                {uploadedData.originalFileName.split("_final.json")[0] ||
+                  uploadedData.originalFileName}
               </Typography>
             </Box>
           </Box>
@@ -475,7 +474,8 @@ const Finalization = () => {
               onClick={() => {
                 navigate("/finalization/summary", {
                   state: {
-                    documentData: uploadedData.raw_json, // ✅ CORRECT - This is OUTPUT data
+                    documentData: uploadedData.raw_json, // OUTPUT for display
+                    completeDocument: uploadedData, // ✅ Complete data including input_data
                     originalFileName: uploadedData.originalFileName,
                     documentName: uploadedData.documentName,
                   },

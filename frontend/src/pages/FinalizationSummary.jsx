@@ -27,17 +27,20 @@ const FinalizationSummary = () => {
   const [documentData, setDocumentData] = useState(null);
   const [documentName, setDocumentName] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [completeDocument, setCompleteDocument] = useState(null);
 
   useEffect(() => {
-    // ✅ IMPORTANT: Get data from location state (passed from Finalization.jsx)
     if (location.state?.documentData) {
       const data = location.state.documentData;
+      const complete = location.state.completeDocument; // ✅ Get complete document
+
       console.log("📤 OUTPUT_DATA (for Summary):", data);
+      console.log("📦 Complete Document:", complete);
 
       setDocumentData(data);
+      setCompleteDocument(complete); // ✅ Store it
       setDocumentName(location.state.originalFileName || "Document");
 
-      // ✅ IMPORTANT: Use raw_json.finalisation (OUTPUT file data)
       if (data.finalisation) {
         const cats = Object.keys(data.finalisation);
         console.log("📂 Categories from OUTPUT (raw_json):", cats);
@@ -84,18 +87,22 @@ const FinalizationSummary = () => {
   const handleFilenameClick = (category, filename) => {
     console.log("🔍 Drilling down to INPUT:", { category, filename });
 
+    // ✅ Use completeDocument which has both input_data and raw_json
+    const fetchedDoc = {
+      input_data: completeDocument?.input_data, // ✅ CORRECT - INPUT data
+      raw_json: completeDocument?.raw_json || documentData, // OUTPUT data
+      finalization_document_name: documentName,
+      original_filename: location.state?.originalFileName || documentName,
+    };
+
+    console.log("📦 Passing to Finalization:", fetchedDoc);
+
     navigate("/finalization", {
       state: {
         viewMode: true,
-        fetchedDocument: {
-          input_data: documentData, // Pass full document data
-          raw_json: documentData,
-          finalization_document_name: documentName,
-          original_filename: location.state?.originalFileName || documentName,
-        },
+        fetchedDocument: fetchedDoc,
         documentName: documentName,
         originalFileName: location.state?.originalFileName || documentName,
-        // ✅ Drill-down parameters
         drillDownCategory: category,
         drillDownFilename: filename,
       },
@@ -129,7 +136,7 @@ const FinalizationSummary = () => {
             Back
           </Button>
           <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "1rem" }}>
-            📄 {documentName}
+            {documentName.split(".json")[0] || documentName}
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>

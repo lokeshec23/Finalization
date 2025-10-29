@@ -201,11 +201,11 @@ const Dashboard = () => {
         </Box>
 
         {/* Statistics */}
-        <Box sx={{ mb: 3 }}>
+        {/* <Box sx={{ mb: 3 }}>
           <Alert severity="info" sx={{ py: 0.5 }}>
             Total Documents: <strong>{documents.length}</strong>
           </Alert>
-        </Box>
+        </Box> */}
 
         {/* Table */}
         <TableContainer component={Paper} elevation={2}>
