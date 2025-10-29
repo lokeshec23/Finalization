@@ -29,21 +29,29 @@ const FinalizationSummary = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
+    // ✅ IMPORTANT: Get data from location state (passed from Finalization.jsx)
     if (location.state?.documentData) {
       const data = location.state.documentData;
+      console.log("📤 OUTPUT_DATA (for Summary):", data);
+
       setDocumentData(data);
       setDocumentName(location.state.originalFileName || "Document");
 
+      // ✅ IMPORTANT: Use raw_json.finalisation (OUTPUT file data)
       if (data.finalisation) {
         const cats = Object.keys(data.finalisation);
+        console.log("📂 Categories from OUTPUT (raw_json):", cats);
         setCategories(cats);
         setActiveCategory(cats[0] || "");
+      } else {
+        console.warn("⚠️ No finalisation found in OUTPUT data!");
       }
     } else {
       navigate("/finalization");
     }
   }, [location.state, navigate]);
 
+  // ✅ Get Note_Extraction data with status "Note - Final" from OUTPUT
   const getFinalNotes = () => {
     if (!documentData?.finalisation?.Note_Extraction) {
       return [];
@@ -53,6 +61,7 @@ const FinalizationSummary = () => {
     );
   };
 
+  // ✅ Get data for selected category from OUTPUT
   const getCategoryData = () => {
     if (!documentData?.finalisation || !activeCategory) {
       return [];
@@ -101,11 +110,19 @@ const FinalizationSummary = () => {
             📄 {documentName}
           </Typography>
         </Box>
-        <Chip
-          label="Finalization Summary"
-          color="primary"
-          sx={{ fontWeight: 600, height: 28 }}
-        />
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Chip
+            label="OUTPUT DATA"
+            color="success"
+            size="small"
+            sx={{ fontWeight: 700 }}
+          />
+          <Chip
+            label="Finalization Summary"
+            color="primary"
+            sx={{ fontWeight: 600, height: 28 }}
+          />
+        </Box>
       </Box>
 
       {/* Split Layout */}
@@ -224,50 +241,75 @@ const FinalizationSummary = () => {
           {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
         </IconButton>
 
-        {/* Right Side - Tables */}
+        {/* Right Side - Tables with Flex Layout */}
         <Box
           sx={{
             flex: 1,
-            overflow: "auto",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
             bgcolor: "#f8f9fa",
             p: 2,
+            gap: 2,
             transition: "all 0.3s ease",
           }}
         >
-          {/* First Table - Note Final */}
-          <FinalizationTable
-            data={finalNotes}
-            title="Note Extraction - Final"
-            categoryName="Note_Extraction"
-          />
-
-          {/* Second Table - Selected Category */}
-          {activeCategory && (
+          {/* First Table - Note Final - Fixed Height */}
+          <Box sx={{ flexShrink: 0 }}>
             <FinalizationTable
-              data={categoryData}
-              title={formatCategoryName(activeCategory)}
-              categoryName={activeCategory}
+              data={finalNotes}
+              title="Note Extraction - Final (OUTPUT)"
+              categoryName="Note_Extraction"
+              isDynamic={false}
             />
+          </Box>
+
+          {/* Second Table - Selected Category - Dynamic Height */}
+          {activeCategory && (
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <FinalizationTable
+                data={categoryData}
+                title={`${formatCategoryName(activeCategory)} (OUTPUT)`}
+                categoryName={activeCategory}
+                isDynamic={true}
+              />
+            </Box>
           )}
 
           {/* Empty State */}
           {!activeCategory && (
-            <Paper
-              elevation={2}
+            <Box
               sx={{
-                p: 5,
-                textAlign: "center",
-                borderRadius: 2,
-                border: "2px dashed #e0e0e0",
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                Select a Category
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Choose a category from the left to view detailed data
-              </Typography>
-            </Paper>
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 5,
+                  textAlign: "center",
+                  borderRadius: 2,
+                  border: "2px dashed #e0e0e0",
+                }}
+              >
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  Select a Category
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Choose a category from the left to view output data
+                </Typography>
+              </Paper>
+            </Box>
           )}
         </Box>
       </Box>

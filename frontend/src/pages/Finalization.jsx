@@ -10,10 +10,6 @@ import {
   Badge,
   Tabs,
   Tab,
-  List,
-  ListItem,
-  ListItemText,
-  Chip,
   Alert,
   LinearProgress,
 } from "@mui/material";
@@ -51,19 +47,23 @@ const Finalization = () => {
   const [activeCategory, setActiveCategory] = useState("");
   const [statusModalOpen, setStatusModalOpen] = useState(false);
 
-  // Check if coming from Dashboard view
+  // ✅ Check if coming from Dashboard view
   useEffect(() => {
     if (location.state?.viewMode && location.state?.documentData) {
       const { documentData, documentName, originalFileName } = location.state;
 
+      console.log("📥 Viewing INPUT data in Finalization:", documentData);
+
       setUploadedData({
         documentName: documentName || "Document",
         originalFileName: originalFileName || "Document.json",
-        raw_json: documentData,
+        input_data: documentData, // ✅ Using INPUT data
       });
 
+      // ✅ Extract categories from input_data.finalisation (INPUT data)
       if (documentData.finalisation) {
         const cats = Object.keys(documentData.finalisation);
+        console.log("📂 Categories from INPUT (input_data):", cats);
         setCategories(cats);
         setActiveCategory(cats[0] || "");
       }
@@ -133,23 +133,12 @@ const Finalization = () => {
           }
         );
 
-        console.log("✅ Upload success:", res.data);
+        console.log("✅ Single file upload success:", res.data);
         alert("File uploaded successfully!");
 
-        setUploadedData({
-          documentName: docName.trim(),
-          originalFileName: selectedFile.name,
-          raw_json: jsonData,
-        });
-
-        if (jsonData.finalisation) {
-          const cats = Object.keys(jsonData.finalisation);
-          setCategories(cats);
-          setActiveCategory(cats[0] || "");
-        }
-
-        // Refresh dashboard
+        // Navigate to dashboard after upload
         window.dispatchEvent(new Event("documentUploaded"));
+        navigate("/dashboard");
       } catch (err) {
         console.error("❌ Upload failed:", err);
         alert(err.response?.data?.detail || "Upload failed. Check console.");
@@ -173,7 +162,6 @@ const Finalization = () => {
     const files = Array.from(e.target.files);
     setInputFiles(files);
 
-    // Auto-extract document name from folder
     if (!folderDocName && files.length > 0) {
       const path = files[0].webkitRelativePath;
       const parts = path.split("/");
@@ -259,29 +247,6 @@ const Finalization = () => {
       console.log("✅ Folder upload success:", res.data);
       alert("Folder uploaded successfully!");
 
-      // Parse output file to show data
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const jsonData = JSON.parse(e.target.result);
-
-          setUploadedData({
-            documentName: folderDocName.trim(),
-            originalFileName: outputFile.name,
-            raw_json: jsonData,
-          });
-
-          if (jsonData.finalisation) {
-            const cats = Object.keys(jsonData.finalisation);
-            setCategories(cats);
-            setActiveCategory(cats[0] || "");
-          }
-        } catch (err) {
-          console.error("Error parsing output file:", err);
-        }
-      };
-      reader.readAsText(outputFile);
-
       // Reset form
       setFolderDocName("");
       setInputFiles([]);
@@ -289,8 +254,9 @@ const Finalization = () => {
       document.getElementById("input-folder").value = "";
       document.getElementById("output-file-input").value = "";
 
-      // Refresh dashboard
+      // Refresh dashboard and redirect
       window.dispatchEvent(new Event("documentUploaded"));
+      navigate("/dashboard");
     } catch (err) {
       console.error("❌ Folder upload failed:", err);
       alert(err.response?.data?.detail || "Upload failed. Check console.");
@@ -320,8 +286,9 @@ const Finalization = () => {
     if (outputInput) outputInput.value = "";
   };
 
+  // ✅ Count final notes from input_data (if available)
   const finalNotesCount =
-    uploadedData?.raw_json?.finalisation?.Note_Extraction?.filter((item) =>
+    uploadedData?.input_data?.finalisation?.Note_Extraction?.filter((item) =>
       item.status?.includes("Note - Final")
     ).length || 0;
 
@@ -336,10 +303,17 @@ const Finalization = () => {
     return acc;
   }, {});
 
-  // If data is uploaded, show split view
+  // ✅ If data is uploaded, show split view with INPUT data
   if (uploadedData) {
+    // ✅ IMPORTANT: Use input_data.finalisation (INPUT data)
     const categoryData =
-      uploadedData.raw_json?.finalisation?.[activeCategory] || [];
+      uploadedData.input_data?.finalisation?.[activeCategory] || [];
+
+    console.log(
+      "📊 Displaying INPUT data for category:",
+      activeCategory,
+      categoryData
+    );
 
     return (
       <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -371,9 +345,9 @@ const Finalization = () => {
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Typography
                 variant="h6"
-                sx={{ fontWeight: 600, color: "#0f62fe" }}
+                sx={{ fontWeight: 600, color: "#28a745" }}
               >
-                📄
+                📁
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {uploadedData.originalFileName}
@@ -382,13 +356,18 @@ const Finalization = () => {
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {/* INPUT DATA Indicator */}
+            <Alert severity="success" sx={{ py: 0, px: 1 }}>
+              INPUT DATA
+            </Alert>
+
             <Button
               variant="contained"
               size="small"
               onClick={() => {
                 navigate("/finalization/summary", {
                   state: {
-                    documentData: uploadedData.raw_json,
+                    documentData: uploadedData.input_data,
                     originalFileName: uploadedData.originalFileName,
                     documentName: uploadedData.documentName,
                   },
@@ -396,28 +375,32 @@ const Finalization = () => {
               }}
               sx={{
                 textTransform: "none",
-                bgcolor: "#28a745",
-                "&:hover": { bgcolor: "#218838" },
+                bgcolor: "#0f62fe",
+                "&:hover": { bgcolor: "#0353e9" },
               }}
             >
-              View Finalization
+              View Output Summary
             </Button>
 
-            <IconButton
-              color="primary"
-              onClick={() => setStatusModalOpen(true)}
-              sx={{
-                bgcolor: "#e3f2fd",
-                "&:hover": { bgcolor: "#bbdefb" },
-              }}
-            >
-              <Badge badgeContent={finalNotesCount} color="error">
-                <AssignmentTurnedInIcon />
-              </Badge>
-            </IconButton>
-            <Typography variant="body2" color="text.secondary">
-              Note Extraction Status
-            </Typography>
+            {finalNotesCount > 0 && (
+              <>
+                <IconButton
+                  color="primary"
+                  onClick={() => setStatusModalOpen(true)}
+                  sx={{
+                    bgcolor: "#e3f2fd",
+                    "&:hover": { bgcolor: "#bbdefb" },
+                  }}
+                >
+                  <Badge badgeContent={finalNotesCount} color="error">
+                    <AssignmentTurnedInIcon />
+                  </Badge>
+                </IconButton>
+                <Typography variant="body2" color="text.secondary">
+                  Note Status
+                </Typography>
+              </>
+            )}
           </Box>
         </Box>
 
@@ -448,11 +431,13 @@ const Finalization = () => {
           </Box>
         </Box>
 
-        <NoteExtractionStatusModal
-          open={statusModalOpen}
-          onClose={() => setStatusModalOpen(false)}
-          data={uploadedData?.raw_json}
-        />
+        {finalNotesCount > 0 && (
+          <NoteExtractionStatusModal
+            open={statusModalOpen}
+            onClose={() => setStatusModalOpen(false)}
+            data={uploadedData?.input_data}
+          />
+        )}
       </Box>
     );
   }
@@ -473,8 +458,14 @@ const Finalization = () => {
             onChange={(e, newValue) => setUploadMode(newValue)}
             sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
           >
-            <Tab label="Single JSON File" sx={{ textTransform: "none" }} />
-            <Tab label="Folder Structure" sx={{ textTransform: "none" }} />
+            <Tab
+              label="Single JSON File (Output)"
+              sx={{ textTransform: "none" }}
+            />
+            <Tab
+              label="Folder Structure (Input + Output)"
+              sx={{ textTransform: "none" }}
+            />
           </Tabs>
 
           {/* Upload Progress */}
@@ -490,6 +481,10 @@ const Finalization = () => {
           {/* Single File Upload Form */}
           {uploadMode === 0 && (
             <Box>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Upload a single output JSON file with finalisation structure
+              </Alert>
+
               <TextField
                 label="Document Name"
                 fullWidth
@@ -535,6 +530,11 @@ const Finalization = () => {
           {/* Folder Upload Form */}
           {uploadMode === 1 && (
             <Box>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Upload input folder + output file. View input data here, output
+                via summary.
+              </Alert>
+
               <TextField
                 label="Document Name"
                 fullWidth

@@ -33,47 +33,50 @@ upload_json_collection = db["uploadedJSON"]
 filtered_key_collection = db["filteredKey"]
 
 # ✅ Helper function to transform input JSON structure
+# ✅ UPDATED: Helper function to transform input JSON structure
+# ✅ UPDATED: Helper function to transform input JSON structure
 def transform_input_json(raw_data):
     """
-    Transform input JSON from Summary->Labels structure to flat key-value pairs
+    Transform input JSON - Only Labels array data
+    - Single value: "LabelName": "Value"
+    - Multiple values: "LabelName": ["Value1", "Value2"]
     """
     try:
         transformed = {}
         
-        # Preserve metadata
-        if "Title" in raw_data:
-            transformed["title"] = raw_data["Title"]
-        if "Url" in raw_data:
-            transformed["url"] = raw_data["Url"]
-        if "StageName" in raw_data:
-            transformed["stage_name"] = raw_data["StageName"]
-        if "GeneratedOn" in raw_data:
-            transformed["generated_on"] = raw_data["GeneratedOn"]
-        
-        # Process Summary -> Labels
+        # Process Summary -> Labels ONLY
         if "Summary" in raw_data and isinstance(raw_data["Summary"], list):
             for summary_item in raw_data["Summary"]:
                 if "Labels" in summary_item and isinstance(summary_item["Labels"], list):
                     for label in summary_item["Labels"]:
+                        # Keep original LabelName
                         label_name = label.get("LabelName", "Unknown")
+                        
+                        # Get Values array
                         values_array = label.get("Values", [])
                         
-                        # Extract just the "Value" field from each value object
+                        # Extract "Value" field from each object
                         extracted_values = [
                             v.get("Value", "") for v in values_array 
-                            if isinstance(v, dict) and "Value" in v
+                            if isinstance(v, dict)
                         ]
                         
-                        # Join multiple values with comma or take first value
-                        if len(extracted_values) > 0:
-                            transformed[label_name.lower().replace(" ", "_")] = ", ".join(extracted_values) if len(extracted_values) > 1 else extracted_values[0]
+                        # Filter out empty values
+                        extracted_values = [v for v in extracted_values if v]
+                        
+                        # Store based on count
+                        if len(extracted_values) == 0:
+                            transformed[label_name] = ""
+                        elif len(extracted_values) == 1:
+                            transformed[label_name] = extracted_values[0]  # Single value as string
                         else:
-                            transformed[label_name.lower().replace(" ", "_")] = ""
+                            transformed[label_name] = extracted_values  # Multiple values as array
         
         return transformed
     except Exception as e:
         print(f"Error transforming JSON: {e}")
-        return raw_data
+        traceback.print_exc()
+        return {}
 
 
 # ✅ Helper function to update filter keys
