@@ -2,13 +2,35 @@ import React, { useState, useEffect } from "react";
 import { Box, Tabs, Tab, Typography, Paper } from "@mui/material";
 import DataTable from "./DataTable";
 
-const DataViewer = ({ categoryData, categoryName }) => {
+const DataViewer = ({ categoryData, categoryName, selectedFilename }) => {
+  // ✅ NEW PROP
   const [activeTab, setActiveTab] = useState(0);
 
-  // Reset tab when category changes
+  // ✅ Reset tab when category changes OR find tab by filename
   useEffect(() => {
-    setActiveTab(0);
-  }, [categoryName]);
+    if (selectedFilename && categoryData && categoryData.length > 0) {
+      // Find the index of the item with matching filename
+      const targetIndex = categoryData.findIndex(
+        (item) => item.filename === selectedFilename
+      );
+
+      if (targetIndex !== -1) {
+        console.log(
+          `🎯 Auto-selecting tab ${
+            targetIndex + 1
+          } for filename: ${selectedFilename}`
+        );
+        setActiveTab(targetIndex);
+      } else {
+        console.warn(
+          `⚠️ Filename "${selectedFilename}" not found in category data`
+        );
+        setActiveTab(0);
+      }
+    } else {
+      setActiveTab(0);
+    }
+  }, [categoryName, selectedFilename, categoryData]);
 
   if (!categoryData || categoryData.length === 0) {
     return (
@@ -36,6 +58,11 @@ const DataViewer = ({ categoryData, categoryName }) => {
   }
 
   const formatTabLabel = (index) => {
+    // ✅ Show filename if available, otherwise use index
+    const item = categoryData[index];
+    if (item && item.filename) {
+      return item.filename;
+    }
     return `${categoryName.replace(/_/g, " ")} ${index + 1}`;
   };
 

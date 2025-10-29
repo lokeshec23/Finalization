@@ -51,21 +51,27 @@ const Finalization = () => {
   // ✅ Check if coming from Dashboard view
   useEffect(() => {
     if (location.state?.viewMode && location.state?.fetchedDocument) {
-      const { fetchedDocument, documentName, originalFileName } =
-        location.state;
+      const {
+        fetchedDocument,
+        documentName,
+        originalFileName,
+        drillDownCategory, // ✅ NEW
+        drillDownFilename, // ✅ NEW
+      } = location.state;
 
       console.log("📥 Viewing document from Dashboard:", fetchedDocument);
 
       // ✅ Determine which data to show (input_data or raw_json)
       const inputData = fetchedDocument.input_data?.finalisation
         ? { finalisation: fetchedDocument.input_data.finalisation }
-        : fetchedDocument.raw_json; // Fallback to raw_json for single file uploads
+        : fetchedDocument.raw_json;
 
       setUploadedData({
         documentName: documentName || "Document",
         originalFileName: originalFileName || "Document.json",
-        input_data: inputData, // INPUT data for display
-        raw_json: fetchedDocument.raw_json, // OUTPUT data for summary
+        input_data: inputData,
+        raw_json: fetchedDocument.raw_json,
+        drillDownFilename: drillDownFilename, // ✅ Pass to DataViewer
       });
 
       // ✅ Extract categories from input_data or raw_json
@@ -79,7 +85,14 @@ const Finalization = () => {
       }
 
       setCategories(cats);
-      setActiveCategory(cats[0] || "");
+
+      // ✅ Set active category based on drill-down or default
+      if (drillDownCategory && cats.includes(drillDownCategory)) {
+        console.log("🎯 Drill-down to category:", drillDownCategory);
+        setActiveCategory(drillDownCategory);
+      } else {
+        setActiveCategory(cats[0] || "");
+      }
     }
   }, [location.state]);
 
@@ -522,6 +535,7 @@ const Finalization = () => {
             <DataViewer
               categoryData={categoryData}
               categoryName={activeCategory}
+              selectedFilename={uploadedData?.drillDownFilename} // ✅ ADD THIS
             />
           </Box>
         </Box>

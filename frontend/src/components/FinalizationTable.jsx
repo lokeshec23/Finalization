@@ -17,6 +17,7 @@ const FinalizationTable = ({
   title,
   categoryName,
   isDynamic = false,
+  onFilenameClick, // ✅ NEW: Click handler for filename
 }) => {
   if (!data || data.length === 0) {
     return (
@@ -114,6 +115,34 @@ const FinalizationTable = ({
       .replace(/â€"/g, "—")
       .replace(/â€™/g, "'")
       .replace(/Â/g, "");
+  };
+
+  // ✅ NEW: Check if cell is filename and make it clickable
+  const renderCellContent = (header, value, rowData) => {
+    const isFilenameColumn = header.toLowerCase() === "filename";
+
+    if (isFilenameColumn && onFilenameClick && value && value !== "—") {
+      return (
+        <Box
+          component="span"
+          onClick={() => onFilenameClick(categoryName, value)}
+          sx={{
+            color: "#0f62fe",
+            cursor: "pointer",
+            fontWeight: 600,
+            textDecoration: "underline",
+            "&:hover": {
+              color: "#0353e9",
+              textDecoration: "none",
+            },
+          }}
+        >
+          {formatValue(value)}
+        </Box>
+      );
+    }
+
+    return formatValue(value);
   };
 
   return (
@@ -271,7 +300,7 @@ const FinalizationTable = ({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {formatValue(row[header])}
+                    {renderCellContent(header, row[header], row)}
                   </TableCell>
                 ))}
               </TableRow>

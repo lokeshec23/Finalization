@@ -80,6 +80,28 @@ const FinalizationSummary = () => {
   const finalNotes = getFinalNotes();
   const categoryData = getCategoryData();
 
+  // ✅ NEW: Handle filename click - Navigate to INPUT view
+  const handleFilenameClick = (category, filename) => {
+    console.log("🔍 Drilling down to INPUT:", { category, filename });
+
+    navigate("/finalization", {
+      state: {
+        viewMode: true,
+        fetchedDocument: {
+          input_data: documentData, // Pass full document data
+          raw_json: documentData,
+          finalization_document_name: documentName,
+          original_filename: location.state?.originalFileName || documentName,
+        },
+        documentName: documentName,
+        originalFileName: location.state?.originalFileName || documentName,
+        // ✅ Drill-down parameters
+        drillDownCategory: category,
+        drillDownFilename: filename,
+      },
+    });
+  };
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <Header />
@@ -261,6 +283,7 @@ const FinalizationSummary = () => {
               title="Note Extraction - Final (OUTPUT)"
               categoryName="Note_Extraction"
               isDynamic={false}
+              onFilenameClick={handleFilenameClick} // ✅ ADD THIS
             />
           </Box>
 
@@ -279,6 +302,7 @@ const FinalizationSummary = () => {
                 title={`${formatCategoryName(activeCategory)} (OUTPUT)`}
                 categoryName={activeCategory}
                 isDynamic={true}
+                onFilenameClick={handleFilenameClick} // ✅ ADD THIS
               />
             </Box>
           )}
