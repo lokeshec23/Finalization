@@ -161,16 +161,17 @@ const FinalizationTable = ({
         />
       </Box>
 
-      {/* Table Content - Scrollable with Sticky Header */}
+      {/* Table Content - Full Horizontal Scroll */}
       <TableContainer
         sx={{
           maxHeight: isDynamic ? "100%" : "450px",
           flex: isDynamic ? 1 : "initial",
           overflowY: "auto",
           overflowX: "auto",
+          width: "100%",
           "&::-webkit-scrollbar": {
-            width: "8px",
-            height: "8px",
+            width: "10px",
+            height: "10px",
           },
           "&::-webkit-scrollbar-track": {
             bgcolor: "#f1f1f1",
@@ -184,7 +185,11 @@ const FinalizationTable = ({
           },
         }}
       >
-        <Table stickyHeader size="small">
+        <Table
+          stickyHeader
+          size="small"
+          sx={{ width: "max-content", minWidth: "100%" }}
+        >
           <TableHead>
             <TableRow>
               <TableCell
@@ -193,13 +198,14 @@ const FinalizationTable = ({
                   fontWeight: 700,
                   bgcolor: "#f8f9fa",
                   borderBottom: "2px solid #0f62fe",
-                  width: "45px",
+                  width: "60px",
                   py: 1,
                   px: 1.5,
                   fontSize: "0.75rem",
                   position: "sticky",
                   top: 0,
                   zIndex: 10,
+                  whiteSpace: "nowrap",
                 }}
               >
                 S.No
@@ -212,13 +218,13 @@ const FinalizationTable = ({
                     fontWeight: 700,
                     bgcolor: "#f8f9fa",
                     borderBottom: "2px solid #0f62fe",
-                    minWidth: 130,
                     py: 1,
                     px: 1.5,
                     fontSize: "0.75rem",
                     position: "sticky",
                     top: 0,
                     zIndex: 10,
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {formatKey(header)}
@@ -249,6 +255,7 @@ const FinalizationTable = ({
                     px: 2,
                     fontSize: "0.8rem",
                     borderRight: "1px solid #e0e0e0",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {index + 1}
@@ -261,12 +268,8 @@ const FinalizationTable = ({
                       fontSize: "0.8rem",
                       py: 1.5,
                       px: 2,
-                      maxWidth: 250,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
-                    title={formatValue(row[header])}
                   >
                     {formatValue(row[header])}
                   </TableCell>
