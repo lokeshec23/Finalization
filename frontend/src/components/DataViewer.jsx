@@ -58,12 +58,8 @@ const DataViewer = ({ categoryData, categoryName, selectedFilename }) => {
   }
 
   const formatTabLabel = (index) => {
-    // ✅ Show filename if available, otherwise use index
-    const item = categoryData[index];
-    if (item && item.filename) {
-      return item.filename;
-    }
-    return `${categoryName.replace(/_/g, " ")} ${index + 1}`;
+    // ✅ Show as Category_1, Category_2, etc.
+    return `${categoryName}_${index + 1}`;
   };
 
   return (
