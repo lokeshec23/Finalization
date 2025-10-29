@@ -139,7 +139,7 @@ const FinalizationSummary = () => {
             {documentName.split(".json")[0] || documentName}
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
+        {/* <Box sx={{ display: "flex", gap: 1 }}>
           <Chip
             label="OUTPUT DATA"
             color="success"
@@ -151,7 +151,7 @@ const FinalizationSummary = () => {
             color="primary"
             sx={{ fontWeight: 600, height: 28 }}
           />
-        </Box>
+        </Box> */}
       </Box>
 
       {/* Split Layout */}

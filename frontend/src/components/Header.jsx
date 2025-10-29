@@ -35,7 +35,8 @@ const Header = () => {
       sx={{
         backgroundColor: "#fff",
         color: "#000",
-        boxShadow: "0px 1px 4px rgba(0,0,0,0.1)",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)", // ✅ Enhanced bottom shadow
+        borderBottom: "1px solid #e0e0e0", // ✅ Optional: subtle border
       }}
     >
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -95,28 +96,6 @@ const Header = () => {
             onClick={() => navigate("/filter")}
           >
             Filter
-          </Button>
-          <Button
-            color="inherit"
-            sx={{
-              textTransform: "none",
-              borderBottom:
-                location.pathname === "/loan-upload"
-                  ? "2px solid #0f62fe"
-                  : "2px solid transparent",
-              borderRadius: 0,
-              fontWeight: location.pathname === "/loan-upload" ? 600 : 500,
-              color:
-                location.pathname === "/loan-upload" ? "#0f62fe" : "inherit",
-              px: 2,
-              "&:hover": {
-                borderBottom: "2px solid #0f62fe",
-                bgcolor: "rgba(15, 98, 254, 0.04)",
-              },
-            }}
-            onClick={() => navigate("/loan-upload")}
-          >
-            Loan Upload
           </Button>
         </Box>
 

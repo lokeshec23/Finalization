@@ -683,9 +683,13 @@ const Finalization = () => {
               }}
             >
               {inputFiles.length > 0
-                ? `✓ ${inputFiles.length} JSON file${
-                    inputFiles.length !== 1 ? "s" : ""
-                  } selected`
+                ? (() => {
+                    const folderPath = inputFiles[0].webkitRelativePath || "";
+                    const folderName = folderPath.split("/")[1] || "Folder";
+                    return `✓ ${folderName} - ${inputFiles.length} JSON file${
+                      inputFiles.length !== 1 ? "s" : ""
+                    } selected`;
+                  })()
                 : "Choose Input Folder"}
               <input
                 id="input-folder"
@@ -697,25 +701,6 @@ const Finalization = () => {
                 onChange={handleInputFolderSelect}
               />
             </Button>
-
-            {/* File Count Only */}
-            {inputFiles.length > 0 && (
-              <Alert
-                severity="success"
-                sx={{
-                  mt: 2,
-                  borderRadius: 2,
-                  py: 0.5,
-                }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {inputFiles.length} JSON file
-                  {inputFiles.length !== 1 ? "s" : ""} from{" "}
-                  {Object.keys(filesByCategory).length} categor
-                  {Object.keys(filesByCategory).length !== 1 ? "ies" : "y"}
-                </Typography>
-              </Alert>
-            )}
           </Box>
 
           {/* Output File Upload */}
