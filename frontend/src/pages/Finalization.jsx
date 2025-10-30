@@ -686,7 +686,7 @@ const Finalization = () => {
                 ? (() => {
                     const folderPath = inputFiles[0].webkitRelativePath || "";
                     const folderName = folderPath.split("/")[1] || "Folder";
-                    return `✓ ${folderName} - ${inputFiles.length} JSON file${
+                    return `✓ ${inputFiles.length} JSON file${
                       inputFiles.length !== 1 ? "s" : ""
                     } selected`;
                   })()
