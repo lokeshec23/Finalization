@@ -87,10 +87,10 @@ const FinalizationSummary = () => {
   const handleFilenameClick = (category, filename) => {
     console.log("🔍 Drilling down to INPUT:", { category, filename });
 
-    // ✅ Use completeDocument which has both input_data and raw_json
     const fetchedDoc = {
-      input_data: completeDocument?.input_data, // ✅ CORRECT - INPUT data
-      raw_json: completeDocument?.raw_json || documentData, // OUTPUT data
+      input_data: completeDocument?.input_data,
+      raw_json: completeDocument?.raw_json || documentData,
+      original_bm_json: completeDocument?.original_bm_json, // ✅ ADD THIS
       finalization_document_name: documentName,
       original_filename: location.state?.originalFileName || documentName,
     };
