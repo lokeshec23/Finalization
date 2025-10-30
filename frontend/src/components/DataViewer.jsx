@@ -13,8 +13,9 @@ const DataViewer = ({
 
   // ✅ Reset tab when category changes OR find tab by filename
   useEffect(() => {
+    let newTabIndex = 0;
+
     if (selectedFilename && categoryData && categoryData.length > 0) {
-      // Find the index of the item with matching filename
       const targetIndex = categoryData.findIndex(
         (item) => item.filename === selectedFilename
       );
@@ -25,17 +26,22 @@ const DataViewer = ({
             targetIndex + 1
           } for filename: ${selectedFilename}`
         );
-        setActiveTab(targetIndex);
+        newTabIndex = targetIndex;
       } else {
         console.warn(
           `⚠️ Filename "${selectedFilename}" not found in category data`
         );
-        setActiveTab(0);
+        newTabIndex = 0;
       }
-    } else {
-      setActiveTab(0);
     }
-  }, [categoryName, selectedFilename, categoryData]);
+
+    setActiveTab(newTabIndex);
+
+    // ✅ Notify parent of tab change
+    if (onTabChange) {
+      onTabChange(newTabIndex);
+    }
+  }, [categoryName, selectedFilename, categoryData, onTabChange]);
 
   if (!categoryData || categoryData.length === 0) {
     return (
