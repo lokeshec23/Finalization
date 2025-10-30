@@ -287,7 +287,7 @@ const FinalizationSummary = () => {
           <Box sx={{ flexShrink: 0 }}>
             <FinalizationTable
               data={finalNotes}
-              title="Note Extraction - Final (OUTPUT)"
+              title="Note Extraction - Final"
               categoryName="Note_Extraction"
               isDynamic={false}
               onFilenameClick={handleFilenameClick} // ✅ ADD THIS
@@ -306,7 +306,7 @@ const FinalizationSummary = () => {
             >
               <FinalizationTable
                 data={categoryData}
-                title={`${formatCategoryName(activeCategory)} (OUTPUT)`}
+                title={`${formatCategoryName(activeCategory)}`}
                 categoryName={activeCategory}
                 isDynamic={true}
                 onFilenameClick={handleFilenameClick} // ✅ ADD THIS
