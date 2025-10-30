@@ -506,7 +506,7 @@ const Finalization = () => {
                 "&:hover": { bgcolor: "#0353e9" },
               }}
             >
-              View Output Summary
+              Show Finalization
             </Button>
 
             {finalNotesCount > 0 && (
