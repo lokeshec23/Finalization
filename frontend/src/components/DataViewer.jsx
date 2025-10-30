@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Box, Tabs, Tab, Typography, Paper } from "@mui/material";
 import DataTable from "./DataTable";
 
-const DataViewer = ({ categoryData, categoryName, selectedFilename }) => {
+const DataViewer = ({
+  categoryData,
+  categoryName,
+  selectedFilename,
+  onTabChange,
+}) => {
   // ✅ NEW PROP
   const [activeTab, setActiveTab] = useState(0);
 
@@ -62,6 +67,13 @@ const DataViewer = ({ categoryData, categoryName, selectedFilename }) => {
     return `${categoryName}_${index + 1}`;
   };
 
+  const handleTabChange = (e, newValue) => {
+    setActiveTab(newValue);
+    if (onTabChange) {
+      onTabChange(newValue); // ✅ Notify parent
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -75,7 +87,7 @@ const DataViewer = ({ categoryData, categoryName, selectedFilename }) => {
       <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs
           value={activeTab}
-          onChange={(e, newValue) => setActiveTab(newValue)}
+          onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
           sx={{

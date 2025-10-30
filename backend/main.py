@@ -108,6 +108,7 @@ async def update_filter_keys(raw_json):
         print(f"Error updating filter keys: {e}")
 
 
+
 # ✅ UPDATED: Upload both single JSON and folder structure
 @app.post("/upload_json")
 async def upload_json(
@@ -173,6 +174,7 @@ async def upload_json(
             
             # Process Input Files into finalisation structure
             input_finalisation = {}
+            original_bm_json = {}  # ✅ NEW: Store original unmodified JSONs
             
             for uploaded_file in input_files:
                 # Extract category from file path
@@ -202,7 +204,18 @@ async def upload_json(
                     print(f"⚠️ Could not decode {filename}, skipping...")
                     continue
                 
-                # Transform the JSON structure
+                # ✅ NEW: Store original JSON (completely unmodified)
+                if category not in original_bm_json:
+                    original_bm_json[category] = []
+                
+                original_json_entry = {
+                    "filename": filename,
+                    "data": raw_json  # Complete original JSON without any transformation
+                }
+                original_bm_json[category].append(original_json_entry)
+                print(f"📦 Stored original JSON: {category}/{filename}")
+                
+                # Transform the JSON structure for input_data
                 transformed_data = transform_input_json(raw_json)
                 
                 # Add filename to transformed data
@@ -244,8 +257,9 @@ async def upload_json(
                 "finalization_document_name": finalization_document_name,
                 "original_filename": output_file.filename,
                 "input_data": {
-                    "finalisation": input_finalisation  # ✅ Structured like output
+                    "finalisation": input_finalisation  # ✅ Transformed/processed data
                 },
+                "original_bm_json": original_bm_json,  # ✅ NEW: Original unmodified JSONs
                 "raw_json": output_json,  # Output data (for compatibility)
                 "upload_date": datetime.utcnow(),
                 "upload_type": "folder_structure",
@@ -255,6 +269,7 @@ async def upload_json(
             
             result = await upload_json_collection.insert_one(document)
             print(f"✅ Folder structure inserted with ID: {result.inserted_id}")
+            print(f"📊 Stored {len(original_bm_json)} categories with original JSONs")
             
             return {
                 "message": "Folder uploaded successfully!",
@@ -262,7 +277,8 @@ async def upload_json(
                 "filename": output_file.filename,
                 "upload_type": "folder_structure",
                 "input_categories": list(input_finalisation.keys()),
-                "total_input_files": sum(len(files) for files in input_finalisation.values())
+                "total_input_files": sum(len(files) for files in input_finalisation.values()),
+                "original_json_categories": list(original_bm_json.keys())  # ✅ NEW
             }
         
         else:

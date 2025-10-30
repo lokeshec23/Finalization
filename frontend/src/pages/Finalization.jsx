@@ -24,6 +24,8 @@ import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import { documentAPI } from "../api/documentAPI";
+import OriginalJsonModal from "../components/OriginalJsonModal";
+import CodeIcon from "@mui/icons-material/Code";
 
 const Finalization = () => {
   const navigate = useNavigate();
@@ -48,6 +50,8 @@ const Finalization = () => {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("");
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [originalJsonModalOpen, setOriginalJsonModalOpen] = useState(false);
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
 
   // ✅ Check if coming from Dashboard view
   useEffect(() => {
@@ -72,7 +76,8 @@ const Finalization = () => {
         originalFileName: originalFileName || "Document.json",
         input_data: inputData,
         raw_json: fetchedDocument.raw_json,
-        drillDownFilename: drillDownFilename, // ✅ Pass to DataViewer
+        original_bm_json: fetchedDocument.original_bm_json || {}, // ✅ NEW
+        drillDownFilename: drillDownFilename,
       });
 
       // ✅ Extract categories from input_data or raw_json
@@ -342,6 +347,7 @@ const Finalization = () => {
           ? { finalisation: uploadedDoc.input_data.finalisation }
           : uploadedDoc.raw_json,
         raw_json: uploadedDoc.raw_json,
+        original_bm_json: uploadedDoc.original_bm_json || {}, // ✅ NEW
       });
 
       // ✅ Extract categories from INPUT data
@@ -461,9 +467,25 @@ const Finalization = () => {
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             {/* INPUT DATA Indicator */}
-            <Alert severity="success" sx={{ py: 0, px: 1 }}>
-              INPUT DATA
-            </Alert>
+            {/* Show Original JSON Button */}
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<CodeIcon />}
+              onClick={() => setOriginalJsonModalOpen(true)}
+              sx={{
+                textTransform: "none",
+                borderColor: "#0f62fe",
+                color: "#0f62fe",
+                fontWeight: 600,
+                "&:hover": {
+                  borderColor: "#0353e9",
+                  bgcolor: "#e3f2fd",
+                },
+              }}
+            >
+              Show Original JSON
+            </Button>
 
             <Button
               variant="contained"
@@ -533,6 +555,7 @@ const Finalization = () => {
               categoryData={categoryData}
               categoryName={activeCategory}
               selectedFilename={uploadedData?.drillDownFilename} // ✅ ADD THIS
+              onTabChange={setActiveTabIndex} // ✅ NEW
             />
           </Box>
         </Box>
@@ -544,6 +567,21 @@ const Finalization = () => {
             data={uploadedData?.input_data}
           />
         )}
+
+        {/* Original JSON Modal */}
+        <OriginalJsonModal
+          open={originalJsonModalOpen}
+          onClose={() => setOriginalJsonModalOpen(false)}
+          jsonData={
+            uploadedData?.original_bm_json?.[activeCategory]?.[activeTabIndex]
+              ?.data
+          }
+          filename={
+            uploadedData?.original_bm_json?.[activeCategory]?.[activeTabIndex]
+              ?.filename || "Unknown"
+          }
+          category={activeCategory}
+        />
       </Box>
     );
   }
