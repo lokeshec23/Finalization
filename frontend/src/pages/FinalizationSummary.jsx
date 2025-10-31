@@ -12,11 +12,17 @@ import {
   Chip,
   IconButton,
   Divider,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import FinalizationTable from "../components/FinalizationTable";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 const FinalizationSummary = () => {
   const location = useLocation();
@@ -28,6 +34,12 @@ const FinalizationSummary = () => {
   const [documentName, setDocumentName] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [completeDocument, setCompleteDocument] = useState(null);
+
+  const [inputValue1, setInputValue1] = useState("");
+  const [inputValue2, setInputValue2] = useState("");
+  const [validationType, setValidationType] = useState("Address");
+  const [validationResult, setValidationResult] = useState(null); // null, true, or false
+  const [validating, setValidating] = useState(false);
 
   useEffect(() => {
     if (location.state?.documentData) {
@@ -109,10 +121,52 @@ const FinalizationSummary = () => {
     });
   };
 
+  // ✅ NEW: Handle validation check
+  const handleValidationCheck = async () => {
+    if (!inputValue1.trim() || !inputValue2.trim()) {
+      alert("Please enter both values");
+      return;
+    }
+
+    setValidating(true);
+    setValidationResult(null);
+
+    try {
+      // TODO: Replace with actual API call
+      console.log("🔍 Validating:", {
+        type: validationType,
+        value1: inputValue1,
+        value2: inputValue2,
+        category: activeCategory,
+      });
+
+      const formData = new FormData();
+      formData.append("value1", inputValue1);
+      formData.append("value2", inputValue2);
+      formData.append("match_type", validationType); // "Address" or "Name"
+
+      const response = await axios.post(
+        "http://127.0.0.1:8000/validate_property",
+        formData
+      );
+
+      console.log("✅ API Response:", response.data);
+      setValidationResult(response.data.is_valid);
+
+      console.log("✅ Validation result:", mockResult);
+    } catch (error) {
+      console.error("❌ Validation error:", error);
+      alert("Validation failed. Check console.");
+    } finally {
+      setValidating(false);
+    }
+  };
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <Header />
 
+      {/* Top Action Bar */}
       {/* Top Action Bar */}
       <Box
         sx={{
@@ -123,9 +177,11 @@ const FinalizationSummary = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 2,
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        {/* Left Side - Back Button & Document Name */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={() => navigate(-1)}
@@ -139,19 +195,92 @@ const FinalizationSummary = () => {
             {documentName.split(".json")[0] || documentName}
           </Typography>
         </Box>
-        {/* <Box sx={{ display: "flex", gap: 1 }}>
-          <Chip
-            label="OUTPUT DATA"
-            color="success"
+
+        {/* Right Side - Validation Inputs */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            flex: 1,
+            justifyContent: "flex-end",
+          }}
+        >
+          {/* Input 1 */}
+          <TextField
             size="small"
-            sx={{ fontWeight: 700 }}
+            placeholder="Enter value 1"
+            value={inputValue1}
+            onChange={(e) => setInputValue1(e.target.value)}
+            sx={{
+              width: 150,
+              "& .MuiOutlinedInput-root": {
+                bgcolor: "#fafafa",
+              },
+            }}
           />
-          <Chip
-            label="Finalization Summary"
-            color="primary"
-            sx={{ fontWeight: 600, height: 28 }}
+
+          {/* Input 2 */}
+          <TextField
+            size="small"
+            placeholder="Enter value 2"
+            value={inputValue2}
+            onChange={(e) => setInputValue2(e.target.value)}
+            sx={{
+              width: 150,
+              "& .MuiOutlinedInput-root": {
+                bgcolor: "#fafafa",
+              },
+            }}
           />
-        </Box> */}
+
+          {/* Dropdown */}
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <Select
+              value={validationType}
+              onChange={(e) => setValidationType(e.target.value)}
+              sx={{
+                bgcolor: "#fafafa",
+              }}
+            >
+              <MenuItem value="Address">Address</MenuItem>
+              <MenuItem value="Name">Name</MenuItem>
+            </Select>
+          </FormControl>
+
+          {/* Check Button */}
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<CheckCircleIcon />}
+            onClick={handleValidationCheck}
+            disabled={validating || !inputValue1.trim() || !inputValue2.trim()}
+            sx={{
+              bgcolor: "#0f62fe",
+              textTransform: "none",
+              fontWeight: 600,
+              minWidth: 100,
+              "&:hover": {
+                bgcolor: "#0353e9",
+              },
+            }}
+          >
+            {validating ? "Checking..." : "Check"}
+          </Button>
+
+          {/* Result Display */}
+          {validationResult !== null && (
+            <Chip
+              label={validationResult ? "TRUE" : "FALSE"}
+              color={validationResult ? "success" : "error"}
+              sx={{
+                fontWeight: 700,
+                fontSize: "0.875rem",
+                minWidth: 80,
+              }}
+            />
+          )}
+        </Box>
       </Box>
 
       {/* Split Layout */}
