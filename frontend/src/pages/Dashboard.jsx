@@ -41,15 +41,11 @@ const Dashboard = () => {
     message: "",
     severity: "success",
   });
-  const [viewLoading, setViewLoading] = useState(false);
-
-  // Add this useEffect in your Dashboard component
+  const [viewLoadingId, setViewLoadingId] = useState(null); // ✅ Changed to track specific document ID
 
   useEffect(() => {
-    // Initial fetch
     fetchDocuments();
 
-    // Listen for upload events
     const handleUpload = () => {
       console.log("Document uploaded, refreshing dashboard...");
       fetchDocuments();
@@ -78,7 +74,7 @@ const Dashboard = () => {
 
   const handleView = async (doc) => {
     try {
-      setViewLoading(true);
+      setViewLoadingId(doc._id); // ✅ Set loading for specific document
       const filename = doc.original_filename;
       const username = localStorage.getItem("username");
 
@@ -97,7 +93,7 @@ const Dashboard = () => {
       navigate("/finalization", {
         state: {
           viewMode: true,
-          fetchedDocument: fetchedDoc, // ✅ Pass complete document
+          fetchedDocument: fetchedDoc,
           documentName: fetchedDoc.finalization_document_name,
           originalFileName: fetchedDoc.original_filename,
           documentId: fetchedDoc._id,
@@ -107,7 +103,7 @@ const Dashboard = () => {
       console.error("Error fetching document:", error);
       showSnackbar("Failed to load document", "error");
     } finally {
-      setViewLoading(false);
+      setViewLoadingId(null); // ✅ Clear loading state
     }
   };
 
@@ -200,13 +196,6 @@ const Dashboard = () => {
           </Box>
         </Box>
 
-        {/* Statistics */}
-        {/* <Box sx={{ mb: 3 }}>
-          <Alert severity="info" sx={{ py: 0.5 }}>
-            Total Documents: <strong>{documents.length}</strong>
-          </Alert>
-        </Box> */}
-
         {/* Table */}
         <TableContainer component={Paper} elevation={2}>
           <Table>
@@ -258,12 +247,29 @@ const Dashboard = () => {
                 documents.map((doc, index) => (
                   <TableRow key={doc._id} hover>
                     <TableCell>{index + 1}</TableCell>
-                    <TableCell>
+                    {/* ✅ Made filename clickable */}
+                    <TableCell
+                      onClick={() => handleView(doc)}
+                      sx={{
+                        cursor: "pointer",
+                      }}
+                    >
                       <Box
                         sx={{ display: "flex", alignItems: "center", gap: 1 }}
                       >
                         <InsertDriveFileIcon fontSize="small" color="primary" />
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 500,
+                            color: "#0f62fe",
+                            textDecoration: "underline",
+                            "&:hover": {
+                              color: "#0353e9",
+                              textDecoration: "none",
+                            },
+                          }}
+                        >
                           {doc.original_filename || "Unknown.json"}
                         </Typography>
                       </Box>
@@ -282,14 +288,15 @@ const Dashboard = () => {
                             color="primary"
                             size="small"
                             onClick={() => handleView(doc)}
-                            disabled={viewLoading}
+                            disabled={viewLoadingId === doc._id} // ✅ Disable only this row
                             sx={{
                               "&:hover": {
                                 bgcolor: "#e3f2fd",
                               },
                             }}
                           >
-                            {viewLoading ? (
+                            {/* ✅ Show loading only for clicked row */}
+                            {viewLoadingId === doc._id ? (
                               <CircularProgress size={20} />
                             ) : (
                               <VisibilityIcon fontSize="small" />
