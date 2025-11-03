@@ -39,19 +39,19 @@ const FinalizationSummary = () => {
   const [inputValue1, setInputValue1] = useState("");
   const [inputValue2, setInputValue2] = useState("");
   const [validationType, setValidationType] = useState("Address");
-  const [validationResult, setValidationResult] = useState(null); // null, true, or false
+  const [validationResult, setValidationResult] = useState(null);
   const [validating, setValidating] = useState(false);
 
   useEffect(() => {
     if (location.state?.documentData) {
       const data = location.state.documentData;
-      const complete = location.state.completeDocument; // ✅ Get complete document
+      const complete = location.state.completeDocument;
 
       console.log("📤 OUTPUT_DATA (for Summary):", data);
       console.log("📦 Complete Document:", complete);
 
       setDocumentData(data);
-      setCompleteDocument(complete); // ✅ Store it
+      setCompleteDocument(complete);
       setDocumentName(location.state.originalFileName || "Document");
 
       if (data.finalisation) {
@@ -67,7 +67,6 @@ const FinalizationSummary = () => {
     }
   }, [location.state, navigate]);
 
-  // ✅ Get Note_Extraction data with status "Note - Final" from OUTPUT
   const getFinalNotes = () => {
     if (!documentData?.finalisation?.Note_Extraction) {
       return [];
@@ -77,7 +76,6 @@ const FinalizationSummary = () => {
     );
   };
 
-  // ✅ Get data for selected category from OUTPUT
   const getCategoryData = () => {
     if (!documentData?.finalisation || !activeCategory) {
       return [];
@@ -96,14 +94,13 @@ const FinalizationSummary = () => {
   const finalNotes = getFinalNotes();
   const categoryData = getCategoryData();
 
-  // ✅ NEW: Handle filename click - Navigate to INPUT view
   const handleFilenameClick = (category, filename) => {
     console.log("🔍 Drilling down to INPUT:", { category, filename });
 
     const fetchedDoc = {
       input_data: completeDocument?.input_data,
       raw_json: completeDocument?.raw_json || documentData,
-      original_bm_json: completeDocument?.original_bm_json, // ✅ ADD THIS
+      original_bm_json: completeDocument?.original_bm_json,
       finalization_document_name: documentName,
       original_filename: location.state?.originalFileName || documentName,
     };
@@ -122,7 +119,6 @@ const FinalizationSummary = () => {
     });
   };
 
-  // ✅ NEW: Handle validation check
   const handleValidationCheck = async () => {
     if (!inputValue1.trim() || !inputValue2.trim()) {
       alert("Please enter both values");
@@ -139,11 +135,10 @@ const FinalizationSummary = () => {
         value2: inputValue2,
       });
 
-      // ✅ Call backend validation API
       const formData = new FormData();
       formData.append("value1", inputValue1.trim());
       formData.append("value2", inputValue2.trim());
-      formData.append("match_type", validationType); // "Address" or "Name"
+      formData.append("match_type", validationType);
 
       const response = await axios.post(
         "http://127.0.0.1:8000/validate_property",
@@ -168,13 +163,13 @@ const FinalizationSummary = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <Header />
+      {/* <Header /> */}
 
-      {/* Top Action Bar */}
+      {/* Top Action Bar - Reduced spacing */}
       <Box
         sx={{
-          px: 3,
-          py: 1.5,
+          px: 2,
+          py: 0.75,
           bgcolor: "#fff",
           borderBottom: "1px solid #e0e0e0",
         }}
@@ -184,8 +179,8 @@ const FinalizationSummary = () => {
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: 2,
-            mb: 1.5,
+            gap: 1,
+            mb: 0.75,
           }}
         >
           <Button
@@ -193,59 +188,63 @@ const FinalizationSummary = () => {
             onClick={() => navigate(-1)}
             variant="outlined"
             size="small"
-            sx={{ textTransform: "none" }}
+            sx={{
+              textTransform: "none",
+              py: 0.25,
+              fontSize: "0.875rem",
+            }}
           >
             Back
           </Button>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "1rem" }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
             {documentName.split(".json")[0] || documentName}
           </Typography>
         </Box>
 
-        {/* Second Row - Validation Inputs */}
+        {/* Second Row - Validation Inputs - Reduced spacing */}
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: 1.5,
+            gap: 1,
             justifyContent: "flex-start",
           }}
         >
-          {/* Input 1 */}
           <TextField
             size="small"
             placeholder="Enter value 1"
             value={inputValue1}
             onChange={(e) => setInputValue1(e.target.value)}
             sx={{
-              width: 150,
-              "& .MuiOutlinedInput-root": {
-                bgcolor: "#fafafa",
+              width: 140,
+              "& .MuiInputBase-root": {
+                height: 32,
+                fontSize: "0.875rem",
               },
             }}
           />
 
-          {/* Input 2 */}
           <TextField
             size="small"
             placeholder="Enter value 2"
             value={inputValue2}
             onChange={(e) => setInputValue2(e.target.value)}
             sx={{
-              width: 150,
-              "& .MuiOutlinedInput-root": {
-                bgcolor: "#fafafa",
+              width: 140,
+              "& .MuiInputBase-root": {
+                height: 32,
+                fontSize: "0.875rem",
               },
             }}
           />
 
-          {/* Dropdown */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
+          <FormControl size="small" sx={{ minWidth: 100 }}>
             <Select
               value={validationType}
               onChange={(e) => setValidationType(e.target.value)}
               sx={{
-                bgcolor: "#fafafa",
+                height: 32,
+                fontSize: "0.875rem",
               }}
             >
               <MenuItem value="Address">Address</MenuItem>
@@ -253,7 +252,6 @@ const FinalizationSummary = () => {
             </Select>
           </FormControl>
 
-          {/* Check Button */}
           <Button
             variant="contained"
             size="small"
@@ -264,31 +262,34 @@ const FinalizationSummary = () => {
               bgcolor: "#0f62fe",
               textTransform: "none",
               fontWeight: 600,
-              minWidth: 100,
+              minWidth: 80,
+              height: 32,
+              fontSize: "0.875rem",
               "&:hover": {
                 bgcolor: "#0353e9",
               },
             }}
           >
-            {validating ? "Checking..." : "Check"}
+            {validating ? "..." : "Check"}
           </Button>
 
-          {/* Result Display */}
           {validationResult !== null && (
             <Chip
               label={validationResult ? "TRUE" : "FALSE"}
               color={validationResult ? "success" : "error"}
+              size="small"
               sx={{
                 fontWeight: 700,
-                fontSize: "0.875rem",
-                minWidth: 80,
+                fontSize: "0.75rem",
+                height: 24,
+                minWidth: 60,
               }}
             />
           )}
         </Box>
       </Box>
 
-      {/* Split Layout */}
+      {/* Split Layout - Reduced spacing */}
       <Box
         sx={{
           display: "flex",
@@ -297,12 +298,12 @@ const FinalizationSummary = () => {
           position: "relative",
         }}
       >
-        {/* Left Sidebar - Collapsible */}
+        {/* Left Sidebar - Reduced spacing */}
         <Paper
           elevation={0}
           sx={{
-            width: sidebarOpen ? "280px" : "0px",
-            minWidth: sidebarOpen ? "280px" : "0px",
+            width: sidebarOpen ? "240px" : "0px",
+            minWidth: sidebarOpen ? "240px" : "0px",
             borderRight: sidebarOpen ? "1px solid #e0e0e0" : "none",
             display: "flex",
             flexDirection: "column",
@@ -312,7 +313,8 @@ const FinalizationSummary = () => {
         >
           <Box
             sx={{
-              p: 1.5,
+              px: 1.5,
+              py: 0.5,
               bgcolor: "#0f62fe",
               color: "white",
               display: "flex",
@@ -321,8 +323,8 @@ const FinalizationSummary = () => {
             }}
           >
             <Typography
-              variant="subtitle1"
-              sx={{ fontWeight: 600, fontSize: "0.95rem" }}
+              variant="body2"
+              sx={{ fontWeight: 600, fontSize: "0.875rem" }}
             >
               Categories
             </Typography>
@@ -333,12 +335,13 @@ const FinalizationSummary = () => {
                 bgcolor: "white",
                 color: "#0f62fe",
                 fontWeight: 700,
-                height: 22,
+                height: 18,
+                fontSize: "0.7rem",
               }}
             />
           </Box>
 
-          <List sx={{ overflow: "auto", flex: 1, p: 1 }}>
+          <List sx={{ overflow: "auto", flex: 1, p: 0.5 }}>
             {categories.map((category, index) => (
               <React.Fragment key={category}>
                 <ListItemButton
@@ -346,12 +349,14 @@ const FinalizationSummary = () => {
                   onClick={() => setActiveCategory(category)}
                   sx={{
                     borderRadius: 1,
-                    mb: 0.5,
-                    py: 1,
+                    mb: 0.25,
+                    py: 0.5,
+                    px: 1.5,
+                    minHeight: 32,
                     borderLeft:
                       activeCategory === category
-                        ? "4px solid #0f62fe"
-                        : "4px solid transparent",
+                        ? "3px solid #0f62fe"
+                        : "3px solid transparent",
                     "&.Mui-selected": {
                       bgcolor: "#e3f2fd",
                       "&:hover": {
@@ -365,46 +370,47 @@ const FinalizationSummary = () => {
                     sx={{
                       "& .MuiListItemText-primary": {
                         fontWeight: activeCategory === category ? 600 : 400,
-                        fontSize: "0.875rem",
+                        fontSize: "0.8rem",
+                        lineHeight: 1.2,
                       },
                     }}
                   />
                 </ListItemButton>
-                {index < categories.length - 1 && <Divider sx={{ my: 0.5 }} />}
+                {index < categories.length - 1 && <Divider sx={{ my: 0.25 }} />}
               </React.Fragment>
             ))}
           </List>
         </Paper>
 
-        {/* Toggle Sidebar Button - Small Size */}
+        {/* Toggle Sidebar Button - Smaller */}
         <IconButton
           onClick={toggleSidebar}
           size="small"
           sx={{
             position: "absolute",
-            left: sidebarOpen ? "268px" : "0px",
+            left: sidebarOpen ? "230px" : "0px",
             top: "50%",
             transform: "translateY(-50%)",
             zIndex: 1000,
             bgcolor: "#0f62fe",
             color: "white",
-            width: 24,
-            height: 48,
-            borderRadius: sidebarOpen ? "0 6px 6px 0" : "0 6px 6px 0",
+            width: 20,
+            height: 40,
+            borderRadius: sidebarOpen ? "0 4px 4px 0" : "0 4px 4px 0",
             transition: "all 0.3s ease",
             "&:hover": {
               bgcolor: "#0353e9",
-              width: 28,
+              width: 24,
             },
             "& .MuiSvgIcon-root": {
-              fontSize: "1rem",
+              fontSize: "0.875rem",
             },
           }}
         >
           {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
         </IconButton>
 
-        {/* Right Side - Tables with Flex Layout */}
+        {/* Right Side - Tables with Reduced spacing */}
         <Box
           sx={{
             flex: 1,
@@ -412,23 +418,23 @@ const FinalizationSummary = () => {
             flexDirection: "column",
             overflow: "hidden",
             bgcolor: "#f8f9fa",
-            p: 2,
-            gap: 2,
+            p: 1,
+            gap: 0,
             transition: "all 0.3s ease",
           }}
         >
-          {/* First Table - Note Final - Fixed Height */}
+          {/* First Table - Note Final */}
           <Box sx={{ flexShrink: 0 }}>
             <FinalizationTable
               data={finalNotes}
               title="Note Extraction - Final"
               categoryName="Note_Extraction"
               isDynamic={false}
-              onFilenameClick={handleFilenameClick} // ✅ ADD THIS
+              onFilenameClick={handleFilenameClick}
             />
           </Box>
 
-          {/* Second Table - Selected Category - Dynamic Height */}
+          {/* Second Table - Selected Category */}
           {activeCategory && (
             <Box
               sx={{
@@ -443,7 +449,7 @@ const FinalizationSummary = () => {
                 title={`${formatCategoryName(activeCategory)}`}
                 categoryName={activeCategory}
                 isDynamic={true}
-                onFilenameClick={handleFilenameClick} // ✅ ADD THIS
+                onFilenameClick={handleFilenameClick}
               />
             </Box>
           )}
@@ -461,13 +467,13 @@ const FinalizationSummary = () => {
               <Paper
                 elevation={2}
                 sx={{
-                  p: 5,
+                  p: 3,
                   textAlign: "center",
                   borderRadius: 2,
                   border: "2px dashed #e0e0e0",
                 }}
               >
-                <Typography variant="h6" color="text.secondary" gutterBottom>
+                <Typography variant="body1" color="text.secondary" gutterBottom>
                   Select a Category
                 </Typography>
                 <Typography variant="body2" color="text.secondary">

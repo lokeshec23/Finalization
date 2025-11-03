@@ -428,7 +428,7 @@ const Finalization = () => {
 
     return (
       <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-        <Header />
+        {/* <Header /> */}
 
         {/* Top Action Bar */}
         <Box
@@ -589,7 +589,7 @@ const Finalization = () => {
   // Upload form view
   return (
     <Box>
-      <Header />
+      {/* <Header /> */}
       <Box
         sx={{
           display: "flex",

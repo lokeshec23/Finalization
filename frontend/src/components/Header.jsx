@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 
 const Header = () => {
   const navigate = useNavigate();
-  const username = localStorage.getItem("username") || ""; // Replace later with actual user name from auth
+  const username = localStorage.getItem("username") || "";
   const firstLetter = username ? username[0].toUpperCase() : "?";
 
   const [anchorEl, setAnchorEl] = useState(null);
@@ -35,23 +35,34 @@ const Header = () => {
       sx={{
         backgroundColor: "#fff",
         color: "#000",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)", // ✅ Enhanced bottom shadow
-        borderBottom: "1px solid #e0e0e0", // ✅ Optional: subtle bordera
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+        borderBottom: "1px solid #e0e0e0",
+        minHeight: 15, // ✅ Reduced height
       }}
     >
-      <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+      <Toolbar
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          // minHeight: 25, // ✅ Reduced from default 64px
+          // py: 0.5, // ✅ Reduced padding
+          // px: 2, // ✅ Reduced horizontal padding
+        }}
+      >
         {/* Left - Logo */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <img
             src="/loandna_logo.png"
             alt="Logo"
-            style={{ height: "36px", cursor: "pointer" }}
+            style={{ height: "25px", cursor: "pointer" }} // ✅ Reduced from 36px
             onClick={() => navigate("/dashboard")}
           />
         </Box>
 
         {/* Center - Navigation */}
-        <Box sx={{ display: "flex", gap: 3 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
+          {" "}
+          {/* ✅ Reduced from gap: 3 */}
           <Button
             color="inherit"
             sx={{
@@ -62,6 +73,10 @@ const Header = () => {
                   : "none",
               borderRadius: 0,
               fontWeight: 500,
+              fontSize: "0.875rem", // ✅ Reduced font size
+              py: 0.5, // ✅ Reduced button padding
+              px: 1.5, // ✅ Reduced horizontal padding
+              // minHeight: 32, // ✅ Reduced button height
             }}
             onClick={() => navigate("/dashboard")}
           >
@@ -77,6 +92,10 @@ const Header = () => {
                   : "none",
               borderRadius: 0,
               fontWeight: 500,
+              fontSize: "0.875rem", // ✅ Reduced font size
+              py: 0.5,
+              px: 1.5,
+              // minHeight: 32,
             }}
             onClick={() => navigate("/finalization")}
           >
@@ -92,6 +111,10 @@ const Header = () => {
                   : "none",
               borderRadius: 0,
               fontWeight: 500,
+              fontSize: "0.875rem", // ✅ Reduced font size
+              py: 0.5,
+              px: 1.5,
+              // minHeight: 32,
             }}
             onClick={() => navigate("/filter")}
           >
@@ -101,8 +124,21 @@ const Header = () => {
 
         {/* Right - Avatar */}
         <Box>
-          <IconButton onClick={handleAvatarClick}>
-            <Avatar sx={{ bgcolor: "#0f62fe", fontWeight: 600 }}>
+          <IconButton
+            onClick={handleAvatarClick}
+            sx={{
+              p: 0.5, // ✅ Reduced padding
+            }}
+          >
+            <Avatar
+              sx={{
+                bgcolor: "#0f62fe",
+                fontWeight: 600,
+                width: 30, // ✅ Reduced from 40px
+                height: 30, // ✅ Reduced from 40px
+                fontSize: "0.875rem", // ✅ Smaller font
+              }}
+            >
               {firstLetter}
             </Avatar>
           </IconButton>
@@ -112,8 +148,22 @@ const Header = () => {
             onClose={handleClose}
             transformOrigin={{ horizontal: "right", vertical: "top" }}
             anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+            PaperProps={{
+              sx: {
+                mt: 0.5,
+              },
+            }}
           >
-            <MenuItem onClick={handleLogout}>Logout</MenuItem>
+            <MenuItem
+              onClick={handleLogout}
+              sx={{
+                fontSize: "0.875rem", // ✅ Smaller menu text
+                py: 0.75, // ✅ Reduced menu item padding
+                px: 2,
+              }}
+            >
+              Logout
+            </MenuItem>
           </Menu>
         </Box>
       </Toolbar>

@@ -156,7 +156,7 @@ const LoanUpload = () => {
 
   return (
     <Box>
-      <Header />
+      {/* <Header /> */}
       <Box sx={{ p: 4, maxWidth: 800, margin: "0 auto" }}>
         <Typography variant="h4" sx={{ fontWeight: 600, mb: 3 }}>
           Upload Loan Folder

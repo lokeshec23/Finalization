@@ -112,7 +112,7 @@ const Filter = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <Header />
+      {/* <Header /> */}
 
       {/* Compact Inline Header - Dropdown on Right */}
       <Box
