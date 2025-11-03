@@ -177,14 +177,17 @@ const FinalizationSummary = () => {
           py: 1.5,
           bgcolor: "#fff",
           borderBottom: "1px solid #e0e0e0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 2,
         }}
       >
-        {/* Left Side - Back Button & Document Name */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
+        {/* First Row - Back Button & Document Name */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            mb: 1.5,
+          }}
+        >
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={() => navigate(-1)}
@@ -199,14 +202,13 @@ const FinalizationSummary = () => {
           </Typography>
         </Box>
 
-        {/* Right Side - Validation Inputs */}
+        {/* Second Row - Validation Inputs */}
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
             gap: 1.5,
-            flex: 1,
-            justifyContent: "flex-end",
+            justifyContent: "flex-start",
           }}
         >
           {/* Input 1 */}

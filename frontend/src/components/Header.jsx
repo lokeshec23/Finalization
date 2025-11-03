@@ -36,7 +36,7 @@ const Header = () => {
         backgroundColor: "#fff",
         color: "#000",
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)", // ✅ Enhanced bottom shadow
-        borderBottom: "1px solid #e0e0e0", // ✅ Optional: subtle border
+        borderBottom: "1px solid #e0e0e0", // ✅ Optional: subtle bordera
       }}
     >
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
