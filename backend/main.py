@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from typing import List, Optional
 import json, os, traceback
-
+from app.validation.compare_strings import safe_string_compare
 # Load .env
 load_dotenv()
 
@@ -444,6 +444,50 @@ async def delete_json(document_id: str):
         print("Delete error:", e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+# ✅ NEW: Property/Name Validation Endpoint
+@app.post("/validate_property")
+async def validate_property(
+    value1: str = Form(...),
+    value2: str = Form(...),
+    match_type: str = Form(...)
+):
+    """
+    Validates if two strings match using fuzzy comparison.
+    Uses manager's validation logic from compare_strings.py
+    
+    :param value1: First string to compare
+    :param value2: Second string to compare  
+    :param match_type: "Address" or "Name"
+    :return: {"is_valid": bool, "match_type": str, "values": [str, str]}
+    """
+    try:
+        # Map frontend types to backend field types
+        field_type_map = {
+            "Address": "address",
+            "Name": "name"
+        }
+        
+        field_type = field_type_map.get(match_type, "default")
+        
+        print(f"🔍 Validating ({match_type}): '{value1}' vs '{value2}'")
+        
+        # ✅ Call manager's validation function
+        result = safe_string_compare(value1, value2, field_type=field_type)
+        
+        print(f"✅ Result: {result}")
+        
+        return {
+            "is_valid": result,
+            "match_type": match_type,
+            "values": [value1, value2]
+        }
+    
+    except Exception as e:
+        print(f"❌ Validation error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
 
 
 app.include_router(auth_router.router)

@@ -23,6 +23,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import FinalizationTable from "../components/FinalizationTable";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import axios from "axios";
 
 const FinalizationSummary = () => {
   const location = useLocation();
@@ -132,31 +133,34 @@ const FinalizationSummary = () => {
     setValidationResult(null);
 
     try {
-      // TODO: Replace with actual API call
       console.log("🔍 Validating:", {
         type: validationType,
         value1: inputValue1,
         value2: inputValue2,
-        category: activeCategory,
       });
 
+      // ✅ Call backend validation API
       const formData = new FormData();
-      formData.append("value1", inputValue1);
-      formData.append("value2", inputValue2);
+      formData.append("value1", inputValue1.trim());
+      formData.append("value2", inputValue2.trim());
       formData.append("match_type", validationType); // "Address" or "Name"
 
       const response = await axios.post(
         "http://127.0.0.1:8000/validate_property",
-        formData
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
       );
 
       console.log("✅ API Response:", response.data);
       setValidationResult(response.data.is_valid);
-
-      console.log("✅ Validation result:", mockResult);
     } catch (error) {
       console.error("❌ Validation error:", error);
-      alert("Validation failed. Check console.");
+      alert(
+        error.response?.data?.detail ||
+          "Validation failed. Check console for details."
+      );
     } finally {
       setValidating(false);
     }
@@ -166,7 +170,6 @@ const FinalizationSummary = () => {
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <Header />
 
-      {/* Top Action Bar */}
       {/* Top Action Bar */}
       <Box
         sx={{
