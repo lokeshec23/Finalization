@@ -201,91 +201,100 @@ const FinalizationSummary = () => {
           </Typography>
         </Box>
 
-        {/* Second Row - Validation Inputs - Reduced spacing */}
+        {/* Second Row - Validation Inputs - Full Width Layout */}
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
             gap: 1,
-            justifyContent: "flex-start",
+            justifyContent: "space-between",
+            width: "100%",
           }}
         >
-          <TextField
-            size="small"
-            placeholder="Enter value 1"
-            value={inputValue1}
-            onChange={(e) => setInputValue1(e.target.value)}
-            sx={{
-              width: 140,
-              "& .MuiInputBase-root": {
-                height: 32,
-                fontSize: "0.875rem",
-              },
-            }}
-          />
-
-          <TextField
-            size="small"
-            placeholder="Enter value 2"
-            value={inputValue2}
-            onChange={(e) => setInputValue2(e.target.value)}
-            sx={{
-              width: 140,
-              "& .MuiInputBase-root": {
-                height: 32,
-                fontSize: "0.875rem",
-              },
-            }}
-          />
-
-          <FormControl size="small" sx={{ minWidth: 100 }}>
-            <Select
-              value={validationType}
-              onChange={(e) => setValidationType(e.target.value)}
-              sx={{
-                height: 32,
-                fontSize: "0.875rem",
-              }}
-            >
-              <MenuItem value="Address">Address</MenuItem>
-              <MenuItem value="Name">Name</MenuItem>
-            </Select>
-          </FormControl>
-
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<CheckCircleIcon />}
-            onClick={handleValidationCheck}
-            disabled={validating || !inputValue1.trim() || !inputValue2.trim()}
-            sx={{
-              bgcolor: "#0f62fe",
-              textTransform: "none",
-              fontWeight: 600,
-              minWidth: 80,
-              height: 32,
-              fontSize: "0.875rem",
-              "&:hover": {
-                bgcolor: "#0353e9",
-              },
-            }}
-          >
-            {validating ? "..." : "Check"}
-          </Button>
-
-          {validationResult !== null && (
-            <Chip
-              label={validationResult ? "TRUE" : "FALSE"}
-              color={validationResult ? "success" : "error"}
+          {/* Left Side - 2 Large Text Boxes */}
+          <Box sx={{ display: "flex", gap: 1, flex: 1, maxWidth: "80%" }}>
+            <TextField
               size="small"
+              placeholder="Enter value 1"
+              value={inputValue1}
+              onChange={(e) => setInputValue1(e.target.value)}
               sx={{
-                fontWeight: 700,
-                fontSize: "0.75rem",
-                height: 24,
-                minWidth: 60,
+                flex: 1,
+                "& .MuiInputBase-root": {
+                  height: 32,
+                  fontSize: "0.875rem",
+                },
               }}
             />
-          )}
+
+            <TextField
+              size="small"
+              placeholder="Enter value 2"
+              value={inputValue2}
+              onChange={(e) => setInputValue2(e.target.value)}
+              sx={{
+                flex: 1,
+                "& .MuiInputBase-root": {
+                  height: 32,
+                  fontSize: "0.875rem",
+                },
+              }}
+            />
+          </Box>
+
+          {/* Right Side - Dropdown, Check Button, Result */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <Select
+                value={validationType}
+                onChange={(e) => setValidationType(e.target.value)}
+                sx={{
+                  height: 32,
+                  fontSize: "0.875rem",
+                }}
+              >
+                <MenuItem value="Address">Address</MenuItem>
+                <MenuItem value="Name">Name</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<CheckCircleIcon />}
+              onClick={handleValidationCheck}
+              disabled={
+                validating || !inputValue1.trim() || !inputValue2.trim()
+              }
+              sx={{
+                bgcolor: "#0f62fe",
+                textTransform: "none",
+                fontWeight: 600,
+                minWidth: 80,
+                height: 32,
+                fontSize: "0.875rem",
+                "&:hover": {
+                  bgcolor: "#0353e9",
+                },
+              }}
+            >
+              {validating ? "..." : "Check"}
+            </Button>
+
+            {validationResult !== null && (
+              <Chip
+                label={validationResult ? "TRUE" : "FALSE"}
+                color={validationResult ? "success" : "error"}
+                size="small"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: "0.75rem",
+                  height: 24,
+                  minWidth: 60,
+                }}
+              />
+            )}
+          </Box>
         </Box>
       </Box>
 
