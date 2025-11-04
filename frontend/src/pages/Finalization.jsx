@@ -8,7 +8,8 @@ import {
   Typography,
   IconButton,
   Badge,
-  Alert,
+  Tabs,
+  Tab,
   LinearProgress,
 } from "@mui/material";
 import axios from "axios";
@@ -19,6 +20,7 @@ import NoteExtractionStatusModal from "../components/NoteExtractionStatusModal";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import { documentAPI } from "../api/documentAPI";
 import OriginalJsonModal from "../components/OriginalJsonModal";
 import CodeIcon from "@mui/icons-material/Code";
@@ -27,13 +29,23 @@ const Finalization = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Tabs
+  const [activeTab, setActiveTab] = useState(0); // 0 = Single Upload, 1 = Batch Upload
+
+  // Single upload states (ZIP)
+  const [zipFile, setZipFile] = useState(null);
+  const [outputFile, setOutputFile] = useState(null);
+  const [docName, setDocName] = useState("");
+
   // Batch upload states
   const [inputFolderPath, setInputFolderPath] = useState("");
   const [outputFolderPath, setOutputFolderPath] = useState("");
-  const [batchProcessing, setBatchProcessing] = useState(false);
+
+  // Common upload states
+  const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // View mode states
+  // Viewer states
   const [uploadedData, setUploadedData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("");
@@ -41,7 +53,7 @@ const Finalization = () => {
   const [originalJsonModalOpen, setOriginalJsonModalOpen] = useState(false);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
 
-  // ✅ Check if coming from Dashboard view
+  // ✅ Handle dashboard navigation data
   useEffect(() => {
     if (location.state?.viewMode && location.state?.fetchedDocument) {
       const {
@@ -51,8 +63,6 @@ const Finalization = () => {
         drillDownCategory,
         drillDownFilename,
       } = location.state;
-
-      console.log("📥 Viewing document from Dashboard:", fetchedDocument);
 
       const inputData = fetchedDocument.input_data?.finalisation
         ? { finalisation: fetchedDocument.input_data.finalisation }
@@ -70,24 +80,108 @@ const Finalization = () => {
       let cats = [];
       if (fetchedDocument.input_data?.finalisation) {
         cats = Object.keys(fetchedDocument.input_data.finalisation);
-        console.log("📂 Categories from INPUT (input_data):", cats);
       } else if (fetchedDocument.raw_json?.finalisation) {
         cats = Object.keys(fetchedDocument.raw_json.finalisation);
-        console.log("📂 Categories from OUTPUT (raw_json):", cats);
       }
 
       setCategories(cats);
-
-      if (drillDownCategory && cats.includes(drillDownCategory)) {
-        console.log("🎯 Drill-down to category:", drillDownCategory);
-        setActiveCategory(drillDownCategory);
-      } else {
-        setActiveCategory(cats[0] || "");
-      }
+      setActiveCategory(
+        drillDownCategory && cats.includes(drillDownCategory)
+          ? drillDownCategory
+          : cats[0] || ""
+      );
     }
   }, [location.state]);
 
-  // Batch upload handler
+  // ===== SINGLE UPLOAD (ZIP) =====
+  const handleSingleUpload = async () => {
+    if (!zipFile) {
+      alert("Please select a ZIP file");
+      return;
+    }
+    if (!outputFile) {
+      alert("Please select output JSON file");
+      return;
+    }
+
+    const username = localStorage.getItem("username");
+    const email = localStorage.getItem("email");
+
+    if (!username || !email) {
+      alert("User credentials not found. Please login again.");
+      return;
+    }
+
+    let finalDocName = docName.trim();
+    if (!finalDocName) {
+      const extracted = outputFile.name
+        .replace("_final.json", "")
+        .replace(".json", "");
+      finalDocName = extracted || "Document";
+    }
+
+    setUploading(true);
+    setUploadProgress(10);
+
+    try {
+      const formData = new FormData();
+      formData.append("username", username);
+      formData.append("email", email);
+      formData.append("finalization_document_name", finalDocName);
+      formData.append("input_files", zipFile); // ZIP instead of folder
+      formData.append("output_file", outputFile);
+
+      const res = await axios.post(
+        "http://127.0.0.1:8000/upload_json",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setUploadProgress(percentCompleted);
+          },
+        }
+      );
+
+      console.log("✅ Single upload success:", res.data);
+      alert("ZIP uploaded successfully!");
+
+      const uploadedDoc = await documentAPI.getDocumentById(
+        res.data.inserted_id
+      );
+
+      setUploadedData({
+        documentName: uploadedDoc.finalization_document_name || "Document",
+        originalFileName: uploadedDoc.original_filename || "Document.json",
+        input_data: uploadedDoc.input_data?.finalisation
+          ? { finalisation: uploadedDoc.input_data.finalisation }
+          : uploadedDoc.raw_json,
+        raw_json: uploadedDoc.raw_json,
+        original_bm_json: uploadedDoc.original_bm_json || {},
+      });
+
+      const cats = uploadedDoc.input_data?.finalisation
+        ? Object.keys(uploadedDoc.input_data.finalisation)
+        : Object.keys(uploadedDoc.raw_json?.finalisation || {});
+      setCategories(cats);
+      setActiveCategory(cats[0] || "");
+
+      window.dispatchEvent(new Event("documentUploaded"));
+      setZipFile(null);
+      setOutputFile(null);
+      setDocName("");
+    } catch (err) {
+      console.error("❌ Single upload failed:", err);
+      alert(err.response?.data?.detail || "Upload failed. Check console.");
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // ===== BATCH UPLOAD =====
   const handleBatchUpload = async () => {
     if (!inputFolderPath.trim() || !outputFolderPath.trim()) {
       alert("Please enter both folder paths");
@@ -102,8 +196,8 @@ const Finalization = () => {
       return;
     }
 
-    setBatchProcessing(true);
-    setUploadProgress(15);
+    setUploading(true);
+    setUploadProgress(20);
 
     try {
       const formData = new FormData();
@@ -111,8 +205,6 @@ const Finalization = () => {
       formData.append("output_folder_path", outputFolderPath.trim());
       formData.append("username", username);
       formData.append("email", email);
-
-      setUploadProgress(40);
 
       const res = await axios.post(
         "http://127.0.0.1:8000/batch_process",
@@ -122,10 +214,7 @@ const Finalization = () => {
         }
       );
 
-      setUploadProgress(95);
-
       console.log("✅ Batch process success:", res.data);
-
       alert(
         `Batch processing completed!\n\n` +
           `✅ Successful: ${res.data.summary.successful}\n` +
@@ -134,10 +223,8 @@ const Finalization = () => {
       );
 
       window.dispatchEvent(new Event("documentUploaded"));
-
       setInputFolderPath("");
       setOutputFolderPath("");
-
       navigate("/dashboard");
     } catch (err) {
       console.error("❌ Batch process failed:", err);
@@ -145,34 +232,23 @@ const Finalization = () => {
         err.response?.data?.detail || "Batch processing failed. Check console."
       );
     } finally {
-      setUploadProgress(100);
-      setTimeout(() => {
-        setBatchProcessing(false);
-        setUploadProgress(0);
-      }, 300);
+      setUploading(false);
+      setUploadProgress(0);
     }
   };
 
-  // ✅ Count final notes from input_data (if available)
+  // ===== VIEW MODE =====
   const finalNotesCount =
     uploadedData?.input_data?.finalisation?.Note_Extraction?.filter((item) =>
       item.status?.includes("Note - Final")
     ).length || 0;
 
-  // ✅ If data is uploaded, show split view with INPUT data
   if (uploadedData) {
     const categoryData =
       uploadedData.input_data?.finalisation?.[activeCategory] || [];
 
-    console.log(
-      "📊 Displaying INPUT data for category:",
-      activeCategory,
-      categoryData
-    );
-
     return (
       <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-        {/* Top Action Bar */}
         <Box
           sx={{
             display: "flex",
@@ -195,12 +271,10 @@ const Finalization = () => {
               Back to Dashboard
             </Button>
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {uploadedData.originalFileName.split("_final.json")[0] ||
-                  uploadedData.originalFileName}
-              </Typography>
-            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {uploadedData.originalFileName.split("_final.json")[0] ||
+                uploadedData.originalFileName}
+            </Typography>
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -226,7 +300,7 @@ const Finalization = () => {
             <Button
               variant="contained"
               size="small"
-              onClick={() => {
+              onClick={() =>
                 navigate("/finalization/summary", {
                   state: {
                     documentData: uploadedData.raw_json,
@@ -234,8 +308,8 @@ const Finalization = () => {
                     originalFileName: uploadedData.originalFileName,
                     documentName: uploadedData.documentName,
                   },
-                });
-              }}
+                })
+              }
               sx={{
                 textTransform: "none",
                 bgcolor: "#0f62fe",
@@ -267,7 +341,6 @@ const Finalization = () => {
           </Box>
         </Box>
 
-        {/* Split Layout */}
         <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <Box
             sx={{
@@ -321,202 +394,174 @@ const Finalization = () => {
     );
   }
 
-  // ✅ Batch Upload Form View
+  // ===== UPLOAD VIEW =====
   return (
-    <Box>
-      <Box
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "calc(100vh - 64px)",
+        bgcolor: "#f5f7fa",
+        p: 3,
+      }}
+    >
+      <Paper
+        elevation={4}
         sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "calc(100vh - 64px)",
-          bgcolor: "#f5f7fa",
-          p: 3,
+          p: 4,
+          width: "100%",
+          maxWidth: 700,
+          borderRadius: 3,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
         }}
       >
-        <Paper
-          elevation={4}
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          centered
           sx={{
-            p: 4,
-            width: "100%",
-            maxWidth: 700,
-            borderRadius: 3,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+            mb: 3,
+            "& .MuiTab-root": { fontWeight: 600, textTransform: "none" },
           }}
         >
-          {/* Header */}
-          <Box sx={{ textAlign: "center", mb: 4 }}>
-            <Typography
-              variant="h5"
+          <Tab label="Single Upload (ZIP)" />
+          <Tab label="Batch Upload" />
+        </Tabs>
+
+        {/* Upload progress */}
+        {uploading && (
+          <Box sx={{ mb: 3 }}>
+            <LinearProgress
+              variant="determinate"
+              value={uploadProgress}
               sx={{
-                fontWeight: 700,
-                color: "#0f62fe",
-                mb: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1,
+                height: 8,
+                borderRadius: 1,
+                bgcolor: "#e0e0e0",
+                "& .MuiLinearProgress-bar": { bgcolor: "#0f62fe" },
               }}
-            >
-              <CloudUploadIcon sx={{ fontSize: 32 }} />
-              Batch Upload Finalization
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Process multiple ZIP files with their corresponding final JSONs
+            />
+            <Typography align="center" sx={{ mt: 1, fontWeight: 600 }}>
+              {activeTab === 0 ? "Uploading..." : "Processing Batch..."}{" "}
+              {uploadProgress}%
             </Typography>
           </Box>
+        )}
 
-          {/* Upload Progress */}
-          {batchProcessing && (
-            <Box sx={{ mb: 3 }}>
-              <LinearProgress
-                variant="determinate"
-                value={uploadProgress}
-                sx={{
-                  height: 8,
-                  borderRadius: 1,
-                  bgcolor: "#e0e0e0",
-                  "& .MuiLinearProgress-bar": {
-                    bgcolor: "#0f62fe",
-                  },
-                }}
-              />
-              <Typography
-                variant="body2"
-                align="center"
-                sx={{ mt: 1, fontWeight: 600, color: "#0f62fe" }}
-              >
-                Processing batch... {uploadProgress}%
-              </Typography>
-            </Box>
-          )}
-
-          {/* Info Alert */}
-          {/* <Alert severity="info" sx={{ mb: 3 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-              📋 Batch Upload Process:
-            </Typography>
-            <Typography variant="body2">
-              • Input folder contains ZIP files (e.g., loan_app_1.zip)
-            </Typography>
-            <Typography variant="body2">
-              • Output folder contains final JSONs (e.g., loan_app_1_final.json)
-            </Typography>
-            <Typography variant="body2">
-              • System will automatically match and process all files
-            </Typography>
-          </Alert> */}
-
-          {/* Input Folder Path */}
-          <Box sx={{ mb: 3 }}>
+        {activeTab === 0 ? (
+          <>
+            {/* Single Upload Form */}
             <Typography
-              variant="subtitle2"
-              sx={{ mb: 1, fontWeight: 600, color: "#333" }}
+              variant="subtitle1"
+              sx={{ fontWeight: 700, mb: 2, color: "#0f62fe" }}
             >
-              Input Folder Path (ZIP Files)
+              Upload ZIP + Output JSON
             </Typography>
+
             <TextField
               fullWidth
-              placeholder="e.g., C:\batch\input_zips or /server/batch/input_zips"
+              label="Document Name"
+              value={docName}
+              onChange={(e) => setDocName(e.target.value)}
+              placeholder="Leave empty to auto-extract"
+              sx={{ mb: 3 }}
+            />
+
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              startIcon={<FolderOpenIcon />}
+              sx={{ mb: 3, py: 2, borderStyle: "dashed" }}
+            >
+              {zipFile ? `✓ ${zipFile.name}` : "Select Input ZIP File"}
+              <input
+                type="file"
+                hidden
+                accept=".zip"
+                onChange={(e) => setZipFile(e.target.files[0])}
+              />
+            </Button>
+
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              startIcon={<FolderOpenIcon />}
+              sx={{ mb: 3, py: 2, borderStyle: "dashed" }}
+            >
+              {outputFile ? `✓ ${outputFile.name}` : "Select Output JSON File"}
+              <input
+                type="file"
+                hidden
+                accept=".json"
+                onChange={(e) => setOutputFile(e.target.files[0])}
+              />
+            </Button>
+
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              startIcon={<CloudUploadIcon />}
+              onClick={handleSingleUpload}
+              disabled={uploading || !zipFile || !outputFile}
+              sx={{
+                py: 1.8,
+                bgcolor: "#0f62fe",
+                fontWeight: 700,
+                textTransform: "none",
+              }}
+            >
+              Upload & View Document
+            </Button>
+          </>
+        ) : (
+          <>
+            {/* Batch Upload Form */}
+            <TextField
+              fullWidth
+              label="Input Folder Path (ZIP Files)"
               value={inputFolderPath}
               onChange={(e) => setInputFolderPath(e.target.value)}
-              variant="outlined"
-              disabled={batchProcessing}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                  bgcolor: "#fafafa",
-                },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <Typography sx={{ mr: 1, color: "#666" }}>📁</Typography>
-                ),
-              }}
+              sx={{ mb: 3 }}
             />
-          </Box>
-
-          {/* Output Folder Path */}
-          <Box sx={{ mb: 3 }}>
-            <Typography
-              variant="subtitle2"
-              sx={{ mb: 1, fontWeight: 600, color: "#333" }}
-            >
-              Output Folder Path (Final JSONs)
-            </Typography>
             <TextField
               fullWidth
-              placeholder="e.g., C:\batch\output_jsons or /server/batch/output_jsons"
+              label="Output Folder Path (Final JSONs)"
               value={outputFolderPath}
               onChange={(e) => setOutputFolderPath(e.target.value)}
-              variant="outlined"
-              disabled={batchProcessing}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                  bgcolor: "#fafafa",
-                },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <Typography sx={{ mr: 1, color: "#666" }}>📄</Typography>
-                ),
-              }}
+              sx={{ mb: 3 }}
             />
-          </Box>
 
-          {/* Process Button */}
-          <Button
-            variant="contained"
-            fullWidth
-            size="large"
-            startIcon={<CloudUploadIcon />}
-            onClick={handleBatchUpload}
-            disabled={
-              batchProcessing ||
-              !inputFolderPath.trim() ||
-              !outputFolderPath.trim()
-            }
-            sx={{
-              py: 1.8,
-              bgcolor: "#0f62fe",
-              textTransform: "none",
-              fontWeight: 700,
-              fontSize: "1rem",
-              borderRadius: 2,
-              boxShadow: "0 4px 12px rgba(15, 98, 254, 0.3)",
-              "&:hover": {
-                bgcolor: "#0353e9",
-                boxShadow: "0 6px 16px rgba(15, 98, 254, 0.4)",
-              },
-              "&:disabled": {
-                bgcolor: "#e0e0e0",
-                color: "#999",
-              },
-            }}
-          >
-            {batchProcessing ? "Processing Batch..." : "Process Batch Upload"}
-          </Button>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<CloudUploadIcon />}
+              onClick={handleBatchUpload}
+              disabled={uploading}
+              sx={{
+                py: 1.8,
+                bgcolor: "#0f62fe",
+                fontWeight: 700,
+                textTransform: "none",
+              }}
+            >
+              Process Batch Upload
+            </Button>
+          </>
+        )}
 
-          {/* Cancel Button */}
-          <Button
-            variant="text"
-            fullWidth
-            onClick={() => navigate("/dashboard")}
-            disabled={batchProcessing}
-            sx={{
-              mt: 2,
-              textTransform: "none",
-              color: "#666",
-              "&:hover": {
-                bgcolor: "#f5f5f5",
-              },
-            }}
-          >
-            Cancel & Return to Dashboard
-          </Button>
-        </Paper>
-      </Box>
+        <Button
+          variant="text"
+          fullWidth
+          onClick={() => navigate("/dashboard")}
+          sx={{ mt: 2, color: "#666", textTransform: "none" }}
+        >
+          Cancel & Return to Dashboard
+        </Button>
+      </Paper>
     </Box>
   );
 };

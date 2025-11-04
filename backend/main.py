@@ -128,20 +128,21 @@ async def upload_json(
     output_file: UploadFile = File(None)
 ):
     """
-    Handles both:
-    1. Single JSON file upload (original functionality)
-    2. Folder structure upload (input files + output file)
+    Handles uploads of:
+    1. Single JSON file (legacy)
+    2. Folder structure (multiple JSON files)
+    3. Single ZIP file (containing categorized JSONs)
     """
     try:
         encodings = ['utf-8', 'utf-8-sig', 'windows-1252', 'latin-1', 'iso-8859-1']
-        
-        # ===== CASE 1: Single JSON File Upload (Original) =====
+
+        # ===== CASE 1: Single JSON File Upload =====
         if json_file and not input_files and not output_file:
             print(f"📄 Single file upload: {json_file.filename}")
-            
+
             file_content = await json_file.read()
             raw_json = None
-            
+
             for encoding in encodings:
                 try:
                     decoded_content = file_content.decode(encoding)
@@ -150,7 +151,7 @@ async def upload_json(
                     break
                 except (UnicodeDecodeError, json.JSONDecodeError):
                     continue
-            
+
             if raw_json is None:
                 raise HTTPException(status_code=400, detail="Could not decode JSON file")
 
@@ -163,7 +164,7 @@ async def upload_json(
                 "original_filename": json_file.filename,
                 "raw_json": raw_json,
                 "upload_date": datetime.utcnow(),
-                "upload_type": "single_file"
+                "upload_type": "single_file",
             }
 
             result = await upload_json_collection.insert_one(document)
@@ -173,74 +174,104 @@ async def upload_json(
                 "message": "File saved successfully!",
                 "inserted_id": str(result.inserted_id),
                 "filename": json_file.filename,
-                "upload_type": "single_file"
+                "upload_type": "single_file",
             }
-        
-        # ===== CASE 2: Folder Structure Upload (Input + Output) =====
+
+        # ===== CASE 2 & 3: Folder or ZIP Upload =====
         elif input_files and output_file:
-            print(f"📁 Folder upload: {finalization_document_name}")
-            
-            # Process Input Files into finalisation structure
+            print(f"📁 Folder or ZIP upload: {finalization_document_name}")
+
             input_finalisation = {}
-            original_bm_json = {}  # ✅ NEW: Store original unmodified JSONs
-            
-            for uploaded_file in input_files:
-                # Extract category from file path
-                file_path = uploaded_file.filename
-                parts = file_path.split('/')
-                
-                if len(parts) >= 2:
-                    category = parts[-2]  # Second to last part is category (1003, Credit_Report, etc.)
+            original_bm_json = {}
+
+            # ✅ Detect ZIP upload (single .zip)
+            if len(input_files) == 1 and input_files[0].filename.endswith(".zip"):
+                uploaded_zip = input_files[0]
+                print(f"📦 ZIP upload detected: {uploaded_zip.filename}")
+
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    temp_path = Path(temp_dir)
+                    zip_path = temp_path / uploaded_zip.filename
+
+                    # Save uploaded zip
+                    with open(zip_path, "wb") as f:
+                        f.write(await uploaded_zip.read())
+
+                    # Extract zip
+                    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                        zip_ref.extractall(temp_dir)
+
+                    print(f"✅ Extracted ZIP contents to: {temp_dir}")
+
+                    # Walk through all JSON files inside
+                    for root, _, files in os.walk(temp_dir):
+                        for file in files:
+                            if not file.endswith(".json"):
+                                continue
+
+                            file_path = Path(root) / file
+                            relative_path = file_path.relative_to(temp_path)
+                            parts = str(relative_path).split(os.sep)
+                            category = parts[0] if len(parts) > 1 else "Uncategorized"
+
+                            try:
+                                with open(file_path, "r", encoding="utf-8") as f:
+                                    content = f.read()
+                                    raw_json = json.loads(content)
+                            except Exception as e:
+                                print(f"⚠️ Could not decode {file_path.name}: {e}")
+                                continue
+
+                            # ✅ Save original JSON
+                            original_bm_json.setdefault(category, []).append({
+                                "filename": file,
+                                "data": raw_json,
+                            })
+
+                            # ✅ Transform for finalisation
+                            transformed = transform_input_json(raw_json)
+                            transformed["filename"] = file
+                            input_finalisation.setdefault(category, []).append(transformed)
+
+                            print(f"✅ Processed {category}/{file}")
+
+            else:
+                # ✅ Multiple JSON files (folder structure)
+                for uploaded_file in input_files:
+                    file_path = uploaded_file.filename
+                    parts = file_path.split('/')
+                    category = parts[-2] if len(parts) >= 2 else "Uncategorized"
                     filename = parts[-1]
-                else:
-                    category = "Uncategorized"
-                    filename = uploaded_file.filename
-                
-                # Read and parse JSON
-                file_content = await uploaded_file.read()
-                raw_json = None
-                
-                for encoding in encodings:
-                    try:
-                        decoded_content = file_content.decode(encoding)
-                        raw_json = json.loads(decoded_content)
-                        break
-                    except (UnicodeDecodeError, json.JSONDecodeError):
+
+                    file_content = await uploaded_file.read()
+                    raw_json = None
+
+                    for encoding in encodings:
+                        try:
+                            decoded_content = file_content.decode(encoding)
+                            raw_json = json.loads(decoded_content)
+                            break
+                        except (UnicodeDecodeError, json.JSONDecodeError):
+                            continue
+
+                    if raw_json is None:
+                        print(f"⚠️ Could not decode {filename}, skipping...")
                         continue
-                
-                if raw_json is None:
-                    print(f"⚠️ Could not decode {filename}, skipping...")
-                    continue
-                
-                # ✅ NEW: Store original JSON (completely unmodified)
-                if category not in original_bm_json:
-                    original_bm_json[category] = []
-                
-                original_json_entry = {
-                    "filename": filename,
-                    "data": raw_json  # Complete original JSON without any transformation
-                }
-                original_bm_json[category].append(original_json_entry)
-                print(f"📦 Stored original JSON: {category}/{filename}")
-                
-                # Transform the JSON structure for input_data
-                transformed_data = transform_input_json(raw_json)
-                
-                # Add filename to transformed data
-                transformed_data["filename"] = filename
-                
-                # Add to category array
-                if category not in input_finalisation:
-                    input_finalisation[category] = []
-                
-                input_finalisation[category].append(transformed_data)
-                
-                print(f"✅ Processed {category}/{filename}")
-            
-            # Process Output File
+
+                    original_bm_json.setdefault(category, []).append({
+                        "filename": filename,
+                        "data": raw_json,
+                    })
+
+                    transformed_data = transform_input_json(raw_json)
+                    transformed_data["filename"] = filename
+                    input_finalisation.setdefault(category, []).append(transformed_data)
+
+                    print(f"✅ Processed {category}/{filename}")
+
+            # ✅ Process output file
             output_content = await output_file.read()
             output_json = None
-            
             for encoding in encodings:
                 try:
                     decoded_content = output_content.decode(encoding)
@@ -249,55 +280,55 @@ async def upload_json(
                     break
                 except (UnicodeDecodeError, json.JSONDecodeError):
                     continue
-            
+
             if output_json is None:
                 raise HTTPException(status_code=400, detail="Could not decode output JSON file")
-            
-            # Update filter keys from both input and output
-            temp_input_structure = {"finalisation": input_finalisation}
-            await update_filter_keys(temp_input_structure)
+
+            # ✅ Update filter keys from both input and output
+            await update_filter_keys({"finalisation": input_finalisation})
             await update_filter_keys(output_json)
-            
-            # Create combined document
+
+            # ✅ Combine document
             document = {
                 "username": username,
                 "email": email,
                 "finalization_document_name": finalization_document_name,
                 "original_filename": output_file.filename,
-                "input_data": {
-                    "finalisation": input_finalisation  # ✅ Transformed/processed data
-                },
-                "original_bm_json": original_bm_json,  # ✅ NEW: Original unmodified JSONs
-                "raw_json": output_json,  # Output data (for compatibility)
+                "input_data": {"finalisation": input_finalisation},
+                "original_bm_json": original_bm_json,
+                "raw_json": output_json,
                 "upload_date": datetime.utcnow(),
-                "upload_type": "folder_structure",
+                "upload_type": "zip_folder" if len(input_files) == 1 and input_files[0].filename.endswith(".zip") else "folder_structure",
                 "input_categories": list(input_finalisation.keys()),
-                "total_input_files": sum(len(files) for files in input_finalisation.values())
+                "total_input_files": sum(len(v) for v in input_finalisation.values()),
             }
-            
+
             result = await upload_json_collection.insert_one(document)
-            print(f"✅ Folder structure inserted with ID: {result.inserted_id}")
+            print(f"✅ Uploaded successfully with ID: {result.inserted_id}")
             print(f"📊 Stored {len(original_bm_json)} categories with original JSONs")
-            
+
             return {
-                "message": "Folder uploaded successfully!",
+                "message": "Upload successful!",
                 "inserted_id": str(result.inserted_id),
                 "filename": output_file.filename,
-                "upload_type": "folder_structure",
+                "upload_type": document["upload_type"],
                 "input_categories": list(input_finalisation.keys()),
-                "total_input_files": sum(len(files) for files in input_finalisation.values()),
-                "original_json_categories": list(original_bm_json.keys())  # ✅ NEW
+                "total_input_files": document["total_input_files"],
             }
-        
+
         else:
-            raise HTTPException(status_code=400, detail="Invalid upload: Provide either single JSON file or input+output files")
-    
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid upload: provide either a single JSON file or ZIP/folder structure"
+            )
+
     except HTTPException:
         raise
     except Exception as e:
-        print("Upload error:", e)
+        print("❌ Upload error:", e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
 
 
 # ===== EXISTING ENDPOINTS (Keep as is) =====
