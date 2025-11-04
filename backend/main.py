@@ -366,7 +366,16 @@ async def list_json(username: str = None):
     try:
         query = {"username": username} if username else {}
         
-        cursor = upload_json_collection.find(query).sort("_id", -1)
+        # ✅ OPTIMIZATION: Use a projection to fetch only necessary fields
+        projection = {
+            "original_filename": 1,
+            "finalization_document_name": 1,
+            "upload_date": 1,
+            "username": 1,
+            "upload_type": 1,
+        }
+        
+        cursor = upload_json_collection.find(query, projection).sort("_id", -1)
         documents = await cursor.to_list(length=100)
         
         for doc in documents:
