@@ -95,6 +95,7 @@ const Finalization = () => {
 
   // ===== SINGLE UPLOAD (ZIP) =====
   const handleSingleUpload = async () => {
+    debugger;
     if (!zipFile) {
       alert("Please select a ZIP file");
       return;
@@ -109,6 +110,16 @@ const Finalization = () => {
 
     if (!username || !email) {
       alert("User credentials not found. Please login again.");
+      return;
+    }
+
+    const inputFileName = zipFile.name.replace(".zip", "");
+    const outputFileName = outputFile.name.replace("_final.json", "");
+
+    if (inputFileName !== outputFileName) {
+      alert(
+        `Input and output files don't match:\nInput: ${zipFile.name}\nOutput: ${outputFile.name}`
+      );
       return;
     }
 

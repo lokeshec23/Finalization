@@ -198,6 +198,21 @@ async def upload_json(
         elif input_files and output_file:
             print(f"📁 Folder or ZIP upload: {finalization_document_name}")
 
+            # ✅ Extract input zip base name (assuming uploaded as zip)
+            input_filename = input_files[0].filename  # first file path in input_files
+            input_base = input_filename.split('/')[-1].replace('.zip', '').strip()
+            
+            # ✅ Extract output base name
+            output_filename = output_file.filename
+            output_base = output_filename.replace('_final.json', '').strip()
+
+            # ✅ Compare
+            if input_base != output_base:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Input and output names do not match: '{input_base}' vs '{output_base}'"
+                )
+
             input_finalisation = {}
             original_bm_json = {}
 
