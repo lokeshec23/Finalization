@@ -545,238 +545,204 @@ async def batch_process(
     input_folder_path: str = Form(...),
     output_folder_path: str = Form(...),
     username: str = Form(...),
-    email: str = Form(...)
+    email: str = Form(...),
 ):
-    """
-    Batch process all ZIP files from input folder and match with output JSONs
-    
-    :param input_folder_path: Folder containing ZIP files
-    :param output_folder_path: Folder containing final JSON files
-    :param username: Logged-in username
-    :param email: Logged-in email
-    :return: Summary of processed files
+    r"""
+    Batch process all ZIP files from:
+        C:\Users\LDNA40022\Lokesh\finalization_json\source\input
+    and their matching JSONs from:
+        C:\Users\LDNA40022\Lokesh\finalization_json\source\output
+
+    After successful DB save, move processed files to:
+        C:\Users\LDNA40022\Lokesh\finalization_json\Processed\input
+        C:\Users\LDNA40022\Lokesh\finalization_json\Processed\output
     """
     try:
         print(f"🚀 Starting batch process")
         print(f"📁 Input folder: {input_folder_path}")
         print(f"📁 Output folder: {output_folder_path}")
-        
-        # Validate folder paths
+
+        # ✅ Validate paths
         if not os.path.exists(input_folder_path):
             raise HTTPException(status_code=400, detail=f"Input folder not found: {input_folder_path}")
-        
         if not os.path.exists(output_folder_path):
             raise HTTPException(status_code=400, detail=f"Output folder not found: {output_folder_path}")
-        
-        # Find all ZIP files in input folder
+
+        # ✅ Derive base path — go up two levels from /source/input → /finalization_json
+        base_root = os.path.dirname(os.path.dirname(input_folder_path.rstrip("\\/")))
+        processed_root = os.path.join(base_root, "Processed")
+        processed_input = os.path.join(processed_root, "input")
+        processed_output = os.path.join(processed_root, "output")
+
+        # ✅ Create Processed directories if not exist
+        os.makedirs(processed_input, exist_ok=True)
+        os.makedirs(processed_output, exist_ok=True)
+
+        print(f"📦 Processed Input Folder: {processed_input}")
+        print(f"📦 Processed Output Folder: {processed_output}")
+
+        # ✅ Find ZIPs
         zip_files = glob.glob(os.path.join(input_folder_path, "*.zip"))
-        
         if not zip_files:
             raise HTTPException(status_code=400, detail="No ZIP files found in input folder")
-        
-        print(f"📦 Found {len(zip_files)} ZIP files")
-        
-        results = {
-            "total": len(zip_files),
-            "successful": [],
-            "failed": [],
-            "skipped": []
-        }
-        
-        encodings = ['utf-8', 'utf-8-sig', 'windows-1252', 'latin-1', 'iso-8859-1']
-        
-        # Process each ZIP file
+
+        print(f"📊 Found {len(zip_files)} ZIP files")
+
+        results = {"total": len(zip_files), "successful": [], "failed": [], "skipped": []}
+        encodings = ["utf-8", "utf-8-sig", "windows-1252", "latin-1", "iso-8859-1"]
+
+        # ✅ Process ZIPs
         for zip_path in zip_files:
             zip_filename = os.path.basename(zip_path)
-            # Extract base name (remove .zip)
-            base_name = zip_filename.replace('.zip', '')
-            
-            print(f"\n{'='*60}")
-            print(f"📦 Processing: {zip_filename}")
-            
+            base_name = zip_filename.replace(".zip", "")
+
+            print(f"\n{'=' * 60}")
+            print(f"📦 Processing ZIP: {zip_filename}")
+
             try:
-                # Find matching output JSON
                 output_json_name = f"{base_name}_final.json"
                 output_json_path = os.path.join(output_folder_path, output_json_name)
-                
+
                 if not os.path.exists(output_json_path):
-                    print(f"⚠️ Output JSON not found: {output_json_name}")
-                    results["skipped"].append({
-                        "filename": zip_filename,
-                        "reason": f"Output JSON not found: {output_json_name}"
-                    })
+                    print(f"⚠️ Missing output JSON: {output_json_name}")
+                    results["skipped"].append({"filename": zip_filename, "reason": "Output JSON missing"})
                     continue
-                
+
                 print(f"✅ Found matching output: {output_json_name}")
-                
-                # Create temporary directory for extraction
+
+                # === ORIGINAL ZIP EXTRACTION + JSON PARSING ===
                 with tempfile.TemporaryDirectory() as temp_dir:
                     temp_path = Path(temp_dir)
-                    
-                    # Extract ZIP file
-                    print(f"📂 Extracting ZIP to: {temp_dir}")
-                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    print(f"📂 Extracting ZIP → {temp_dir}")
+                    with zipfile.ZipFile(zip_path, "r") as zip_ref:
                         zip_ref.extractall(temp_dir)
-                    
-                    # Process extracted JSON files (input data)
+
                     input_finalisation = {}
                     original_bm_json = {}
-                    
-                    # Walk through extracted directories
-                    for root, dirs, files in os.walk(temp_dir):
+
+                    for root, _, files in os.walk(temp_dir):
                         for file in files:
-                            if file.endswith('.json'):
-                                file_path = Path(root) / file
-                                relative_path = file_path.relative_to(temp_path)
-                                
-                                # Extract category from path
-                                path_parts = str(relative_path).split(os.sep)
-                                if len(path_parts) > 1:
-                                    category = path_parts[0]  # First folder is category (1003, Credit_Report, etc.)
-                                    filename = path_parts[-1]
-                                else:
-                                    category = "Uncategorized"
-                                    filename = file
-                                
-                                # Read and parse JSON
-                                with open(file_path, 'r', encoding='utf-8') as f:
-                                    content = f.read()
-                                    raw_json = None
-                                    
-                                    for encoding in encodings:
-                                        try:
-                                            raw_json = json.loads(content)
-                                            break
-                                        except (UnicodeDecodeError, json.JSONDecodeError):
-                                            continue
-                                    
-                                    if raw_json is None:
-                                        print(f"⚠️ Could not decode {filename}, skipping...")
-                                        continue
-                                    
-                                    # Store original JSON
-                                    if category not in original_bm_json:
-                                        original_bm_json[category] = []
-                                    
-                                    original_json_entry = {
-                                        "filename": filename,
-                                        "data": raw_json
-                                    }
-                                    original_bm_json[category].append(original_json_entry)
-                                    
-                                    # Transform for input_data
-                                    transformed_data = transform_input_json(raw_json)
-                                    transformed_data["filename"] = filename
-                                    
-                                    if category not in input_finalisation:
-                                        input_finalisation[category] = []
-                                    
-                                    input_finalisation[category].append(transformed_data)
-                                    print(f"✅ Processed {category}/{filename}")
-                    
-                    # Read output JSON
-                    with open(output_json_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                        output_json = None
-                        
-                        for encoding in encodings:
+                            if not file.endswith(".json"):
+                                continue
+
+                            file_path = Path(root) / file
+                            relative_path = file_path.relative_to(temp_path)
+                            path_parts = str(relative_path).split(os.sep)
+                            category = path_parts[0] if len(path_parts) > 1 else "Uncategorized"
+
                             try:
-                                output_json = json.loads(content)
-                                print(f"✅ Decoded output file with: {encoding}")
+                                with open(file_path, "r", encoding="utf-8") as f:
+                                    raw_json = json.load(f)
+                            except Exception as e:
+                                print(f"⚠️ Could not read {file}: {e}")
+                                continue
+
+                            # Store original JSON
+                            original_bm_json.setdefault(category, []).append(
+                                {"filename": file, "data": raw_json}
+                            )
+
+                            # Transform for DB
+                            transformed = transform_input_json(raw_json)
+                            transformed["filename"] = file
+                            input_finalisation.setdefault(category, []).append(transformed)
+                            print(f"✅ Processed {category}/{file}")
+
+                    # === Parse output JSON ===
+                    with open(output_json_path, "r", encoding="utf-8") as f:
+                        output_json = None
+                        for enc in encodings:
+                            try:
+                                output_json = json.loads(f.read())
+                                print(f"✅ Decoded output file with: {enc}")
                                 break
                             except (UnicodeDecodeError, json.JSONDecodeError):
-                                continue
-                        
+                                f.seek(0)
                         if output_json is None:
-                            raise Exception("Could not decode output JSON file")
-                    
-                    # Update filter keys
-                    temp_input_structure = {"finalisation": input_finalisation}
-                    await update_filter_keys(temp_input_structure)
+                            raise Exception("Could not decode output JSON")
+
+                    # === Update Filter Keys ===
+                    await update_filter_keys({"finalisation": input_finalisation})
                     await update_filter_keys(output_json)
-                    
-                    # Check if document already exists (for update)
-                    existing_doc = await upload_json_collection.find_one({
-                        "username": username,
-                        "finalization_document_name": base_name
-                    })
-                    
-                    # Create document
+
+                    # === Save to MongoDB ===
+                    existing_doc = await upload_json_collection.find_one(
+                        {"username": username, "finalization_document_name": base_name}
+                    )
+
                     document = {
                         "username": username,
                         "email": email,
                         "finalization_document_name": base_name,
                         "original_filename": output_json_name,
-                        "input_data": {
-                            "finalisation": input_finalisation
-                        },
+                        "input_data": {"finalisation": input_finalisation},
                         "original_bm_json": original_bm_json,
                         "raw_json": output_json,
                         "upload_date": datetime.utcnow(),
                         "upload_type": "batch_zip",
                         "input_categories": list(input_finalisation.keys()),
-                        "total_input_files": sum(len(files) for files in input_finalisation.values())
+                        "total_input_files": sum(len(v) for v in input_finalisation.values()),
                     }
-                    
+
                     if existing_doc:
-                        # Update existing document
-                        await upload_json_collection.update_one(
-                            {"_id": existing_doc["_id"]},
-                            {"$set": document}
-                        )
-                        print(f"🔄 Updated existing document: {base_name}")
-                        action = "updated"
-                        doc_id = str(existing_doc["_id"])
+                        await upload_json_collection.update_one({"_id": existing_doc["_id"]}, {"$set": document})
+                        print(f"🔄 Updated document: {base_name}")
                     else:
-                        # Insert new document
-                        result = await upload_json_collection.insert_one(document)
+                        await upload_json_collection.insert_one(document)
                         print(f"✅ Inserted new document: {base_name}")
-                        action = "inserted"
-                        doc_id = str(result.inserted_id)
-                    
-                    results["successful"].append({
-                        "zip_file": zip_filename,
-                        "output_file": output_json_name,
-                        "document_name": base_name,
-                        "action": action,
-                        "document_id": doc_id,
-                        "categories": list(input_finalisation.keys()),
-                        "total_files": sum(len(files) for files in input_finalisation.values())
-                    })
-                    
-                    print(f"✅ Successfully processed: {zip_filename}")
-            
+
+                    # === MOVE FILES TO PROCESSED ===
+                    dest_zip = os.path.join(processed_input, zip_filename)
+                    dest_json = os.path.join(processed_output, output_json_name)
+
+                    try:
+                        if os.path.exists(dest_zip):
+                            os.remove(dest_zip)
+                        if os.path.exists(dest_json):
+                            os.remove(dest_json)
+
+                        os.replace(zip_path, dest_zip)
+                        os.replace(output_json_path, dest_json)
+
+                        print(f"📁 Moved ZIP → {dest_zip}")
+                        print(f"📄 Moved JSON → {dest_json}")
+                    except Exception as move_err:
+                        print(f"⚠️ Move error for {zip_filename}: {move_err}")
+
+                    results["successful"].append(
+                        {"zip_file": zip_filename, "output_file": output_json_name, "document_name": base_name}
+                    )
+
             except Exception as e:
-                print(f"❌ Error processing {zip_filename}: {str(e)}")
+                print(f"❌ Error processing {zip_filename}: {e}")
                 traceback.print_exc()
-                results["failed"].append({
-                    "filename": zip_filename,
-                    "error": str(e)
-                })
-                continue  # Skip to next ZIP file
-        
-        print(f"\n{'='*60}")
-        print(f"📊 Batch Processing Complete")
-        print(f"✅ Successful: {len(results['successful'])}")
-        print(f"❌ Failed: {len(results['failed'])}")
-        print(f"⏭️ Skipped: {len(results['skipped'])}")
-        
+                results["failed"].append({"filename": zip_filename, "error": str(e)})
+
+        print(f"\n{'=' * 60}")
+        print(f"Batch Processing Complete")
+        print(f"Successful: {len(results['successful'])}")
+        print(f"Failed: {len(results['failed'])}")
+        print(f"Skipped: {len(results['skipped'])}")
+
         return {
-            "message": "Batch processing completed",
+            "message": "Batch processing completed successfully!",
             "summary": {
                 "total": results["total"],
                 "successful": len(results["successful"]),
                 "failed": len(results["failed"]),
-                "skipped": len(results["skipped"])
+                "skipped": len(results["skipped"]),
             },
-            "details": results
+            "details": results,
         }
-    
-    except HTTPException:
-        raise
+
     except Exception as e:
         print(f"❌ Batch process error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Batch processing failed: {str(e)}")
+
+
+
+
+
 
 app.include_router(auth_router.router)

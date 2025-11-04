@@ -217,9 +217,9 @@ const Finalization = () => {
       console.log("✅ Batch process success:", res.data);
       alert(
         `Batch processing completed!\n\n` +
-          `✅ Successful: ${res.data.summary.successful}\n` +
-          `❌ Failed: ${res.data.summary.failed}\n` +
-          `⏭️ Skipped: ${res.data.summary.skipped}`
+          `Successful: ${res.data.summary.successful}\n` +
+          `Failed: ${res.data.summary.failed}\n` +
+          `Skipped: ${res.data.summary.skipped}`
       );
 
       window.dispatchEvent(new Event("documentUploaded"));
@@ -425,7 +425,7 @@ const Finalization = () => {
             "& .MuiTab-root": { fontWeight: 600, textTransform: "none" },
           }}
         >
-          <Tab label="Single Upload (ZIP)" />
+          <Tab label="Single Upload" />
           <Tab label="Batch Upload" />
         </Tabs>
 
@@ -452,12 +452,12 @@ const Finalization = () => {
         {activeTab === 0 ? (
           <>
             {/* Single Upload Form */}
-            <Typography
+            {/* <Typography
               variant="subtitle1"
               sx={{ fontWeight: 700, mb: 2, color: "#0f62fe" }}
             >
               Upload ZIP + Output JSON
-            </Typography>
+            </Typography> */}
 
             <TextField
               fullWidth
@@ -540,7 +540,9 @@ const Finalization = () => {
               fullWidth
               startIcon={<CloudUploadIcon />}
               onClick={handleBatchUpload}
-              disabled={uploading}
+              disabled={
+                uploading || !inputFolderPath.trim() || !outputFolderPath.trim()
+              }
               sx={{
                 py: 1.8,
                 bgcolor: "#0f62fe",
