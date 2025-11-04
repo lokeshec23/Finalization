@@ -29,12 +29,15 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep"; // for "Delete All"
+import axios from "axios"; // to call FastAPI directly
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -152,6 +155,29 @@ const Dashboard = () => {
     return "—";
   };
 
+  // ✅ Open the "Delete All" confirmation dialog
+  const handleDeleteAllClick = () => {
+    setDeleteAllDialogOpen(true);
+  };
+
+  // ✅ Confirm delete all
+  const handleDeleteAllConfirm = async () => {
+    try {
+      await axios.delete("http://127.0.0.1:8000/delete_all_json");
+      showSnackbar("All documents deleted successfully", "success");
+      setDeleteAllDialogOpen(false);
+      fetchDocuments(); // refresh table
+    } catch (error) {
+      console.error("Error deleting all documents:", error);
+      showSnackbar("Failed to delete all documents", "error");
+    }
+  };
+
+  // ✅ Cancel delete all
+  const handleDeleteAllCancel = () => {
+    setDeleteAllDialogOpen(false);
+  };
+
   return (
     <Box>
       {/* <Header /> */}
@@ -178,6 +204,22 @@ const Dashboard = () => {
             >
               Refresh
             </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteSweepIcon />}
+              onClick={handleDeleteAllClick}
+              disabled={loading || documents.length === 0}
+              sx={{
+                textTransform: "none",
+                borderColor: "#f44336",
+                color: "#f44336",
+                "&:hover": { bgcolor: "#ffebee", borderColor: "#d32f2f" },
+              }}
+            >
+              Delete All
+            </Button>
+
             <Button
               variant="contained"
               startIcon={<UploadFileIcon />}
@@ -363,6 +405,37 @@ const Dashboard = () => {
               sx={{ textTransform: "none" }}
             >
               Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* ✅ Delete All Confirmation Dialog */}
+        <Dialog
+          open={deleteAllDialogOpen}
+          onClose={handleDeleteAllCancel}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle sx={{ bgcolor: "#f5f5f5" }}>
+            Delete All Documents
+          </DialogTitle>
+          <DialogContent sx={{ mt: 2 }}>
+            <DialogContentText>
+              This will permanently delete <strong>all records</strong> from the
+              database. This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={handleDeleteAllCancel} variant="outlined">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteAllConfirm}
+              variant="contained"
+              color="error"
+              sx={{ textTransform: "none" }}
+            >
+              Delete All
             </Button>
           </DialogActions>
         </Dialog>

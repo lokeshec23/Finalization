@@ -116,6 +116,23 @@ async def update_filter_keys(raw_json):
         print(f"Error updating filter keys: {e}")
 
 
+@app.delete("/delete_all_json")
+async def delete_all_json():
+    """
+    Deletes all documents from uploadedJSON collection.
+    ⚠️ Use with caution — this action is irreversible.
+    """
+    try:
+        result = await upload_json_collection.delete_many({})
+        return {
+            "message": f"Deleted {result.deleted_count} documents from uploadedJSON collection",
+            "deleted_count": result.deleted_count,
+        }
+    except Exception as e:
+        print(f"❌ Error deleting all documents: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to delete all documents")
+
 
 # ✅ UPDATED: Upload both single JSON and folder structure
 @app.post("/upload_json")
