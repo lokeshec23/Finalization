@@ -13,6 +13,8 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const Header = () => {
+  const IS_TEAM_SELECTED =
+    localStorage.getItem("selectedTeam")?.trim().length > 0 ? false : true;
   const navigate = useNavigate();
   const username = localStorage.getItem("username") || "";
   const firstLetter = username ? username[0].toUpperCase() : "?";
@@ -24,7 +26,8 @@ const Header = () => {
   const handleClose = () => setAnchorEl(null);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    localStorage.clear();
+    sessionStorage.clear();
     handleClose();
     navigate("/login");
   };
@@ -64,6 +67,7 @@ const Header = () => {
           {" "}
           {/* ✅ Reduced from gap: 3 */}
           <Button
+            disabled={IS_TEAM_SELECTED}
             color="inherit"
             sx={{
               textTransform: "none",
@@ -83,6 +87,7 @@ const Header = () => {
             Dashboard
           </Button>
           <Button
+            disabled={IS_TEAM_SELECTED}
             color="inherit"
             sx={{
               textTransform: "none",
@@ -102,6 +107,7 @@ const Header = () => {
             Finalization
           </Button>
           <Button
+            disabled={IS_TEAM_SELECTED}
             color="inherit"
             sx={{
               textTransform: "none",
