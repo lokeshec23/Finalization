@@ -95,7 +95,6 @@ const Finalization = () => {
 
   // ===== SINGLE UPLOAD (ZIP) =====
   const handleSingleUpload = async () => {
-    debugger;
     if (!zipFile) {
       alert("Please select a ZIP file");
       return;

@@ -312,7 +312,8 @@ const Dashboard = () => {
                             },
                           }}
                         >
-                          {doc.original_filename || "Unknown.json"}
+                          {doc.original_filename.split("_final.json")[0] ||
+                            "Unknown.json"}
                         </Typography>
                       </Box>
                     </TableCell>
