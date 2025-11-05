@@ -120,6 +120,7 @@ const FinalizationSummary = () => {
   };
 
   const handleValidationCheck = async () => {
+    debugger;
     if (!inputValue1.trim() || !inputValue2.trim()) {
       alert("Please enter both values");
       return;
