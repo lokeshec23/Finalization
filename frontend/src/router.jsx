@@ -6,9 +6,18 @@ import Finalization from "./pages/Finalization";
 import FinalizationSummary from "./pages/FinalizationSummary";
 import Filter from "./pages/Filter";
 import ProtectedRoute from "./components/ProtectedRoute";
+import TeamSelection from "./pages/TeamSelection"; // ✅ Import new page
 
 const router = createBrowserRouter([
-  { path: "/", element: <Login /> },
+  // ✅ New root route
+  {
+    path: "/",
+    element: (
+      <ProtectedRoute>
+        <TeamSelection />
+      </ProtectedRoute>
+    ),
+  },
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
   {

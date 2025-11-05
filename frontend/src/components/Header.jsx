@@ -155,6 +155,15 @@ const Header = () => {
             }}
           >
             <MenuItem
+              onClick={() => {
+                localStorage.removeItem("selectedTeam");
+                handleClose();
+                navigate("/");
+              }}
+            >
+              Change Workspace
+            </MenuItem>
+            <MenuItem
               onClick={handleLogout}
               sx={{
                 fontSize: "0.875rem", // ✅ Smaller menu text

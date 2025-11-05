@@ -26,7 +26,7 @@ const Login = () => {
       localStorage.setItem("token", response.access_token);
       localStorage.setItem("username", response.username);
       localStorage.setItem("email", response.email);
-      navigate("/dashboard");
+      navigate("/");
     } catch (err) {
       setError(err.response?.data?.detail || "Login failed");
     }

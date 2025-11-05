@@ -2,11 +2,14 @@ import axios from "axios";
 
 const API_BASE = "http://127.0.0.1:8000";
 
+// ✅ Helper to get team from storage
+const getTeam = () => localStorage.getItem("selectedTeam");
+
 export const documentAPI = {
-  // List all documents
   listDocuments: async (username = null) => {
     try {
-      const params = username ? { username } : {};
+      const params = { team: getTeam() }; // ✅ Add team
+      if (username) params.username = username;
       const response = await axios.get(`${API_BASE}/list_json`, { params });
       return response.data;
     } catch (error) {
@@ -29,7 +32,10 @@ export const documentAPI = {
   // ✅ NEW: Get document by ID (alias for clarity)
   getDocumentById: async (documentId) => {
     try {
-      const response = await axios.get(`${API_BASE}/get_json/${documentId}`);
+      const params = { team: getTeam() }; // ✅ Add team
+      const response = await axios.get(`${API_BASE}/get_json/${documentId}`, {
+        params,
+      });
       return response.data;
     } catch (error) {
       console.error("Error fetching document by ID:", error);
@@ -40,10 +46,8 @@ export const documentAPI = {
   // Get document by filename
   getDocumentByFilename: async (filename, username = null) => {
     try {
-      const params = { filename };
-      if (username) {
-        params.username = username;
-      }
+      const params = { filename, team: getTeam() }; // ✅ Add team
+      if (username) params.username = username;
       const response = await axios.get(`${API_BASE}/get_json_by_filename`, {
         params,
       });
@@ -57,8 +61,10 @@ export const documentAPI = {
   // Delete document
   deleteDocument: async (documentId) => {
     try {
+      const params = { team: getTeam() }; // ✅ Add team
       const response = await axios.delete(
-        `${API_BASE}/delete_json/${documentId}`
+        `${API_BASE}/delete_json/${documentId}`,
+        { params }
       );
       return response.data;
     } catch (error) {

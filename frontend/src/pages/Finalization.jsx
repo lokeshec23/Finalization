@@ -140,7 +140,7 @@ const Finalization = () => {
       formData.append("finalization_document_name", finalDocName);
       formData.append("input_files", zipFile); // ZIP instead of folder
       formData.append("output_file", outputFile);
-
+      formData.append("team", localStorage.getItem("selectedTeam"));
       const res = await axios.post(
         "http://127.0.0.1:8000/upload_json",
         formData,
@@ -215,7 +215,7 @@ const Finalization = () => {
       formData.append("output_folder_path", outputFolderPath.trim());
       formData.append("username", username);
       formData.append("email", email);
-
+      formData.append("team", localStorage.getItem("selectedTeam"));
       const res = await axios.post(
         "http://127.0.0.1:8000/batch_process",
         formData,
