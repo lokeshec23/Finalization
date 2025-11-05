@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -9,15 +9,45 @@ import {
   Menu,
   MenuItem,
   IconButton,
+  Chip, // ✅ Import Chip
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import WorkspacesIcon from "@mui/icons-material/Workspaces"; // ✅ Import icon
 
 const Header = () => {
-  const IS_TEAM_SELECTED =
-    localStorage.getItem("selectedTeam")?.trim().length > 0 ? false : true;
   const navigate = useNavigate();
   const username = localStorage.getItem("username") || "";
+  const selectedTeam = localStorage.getItem("selectedTeam") || "";
   const firstLetter = username ? username[0].toUpperCase() : "?";
+
+  // ✅ NEW: State to hold the current team
+  const [currentTeam, setCurrentTeam] = useState("");
+
+  // ✅ NEW: Read the team from localStorage on component mount
+  useEffect(() => {
+    debugger;
+    const team = localStorage.getItem("selectedTeam");
+    if (team) {
+      if (team == "dd") setCurrentTeam("Due Diligence");
+      else if (team == "ic") setCurrentTeam("Income Calculation");
+      else setCurrentTeam(team.toUpperCase()); // e.g., 'DD' or 'IC'
+    }
+
+    // Optional: Add an event listener to update if it changes elsewhere
+    const handleStorageChange = () => {
+      const updatedTeam = localStorage.getItem("selectedTeam");
+      setCurrentTeam(updatedTeam ? updatedTeam.toUpperCase() : "");
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    // This custom event is useful if you change the team without a page reload
+    window.addEventListener("teamChanged", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("teamChanged", handleStorageChange);
+    };
+  }, [selectedTeam]);
 
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -26,10 +56,17 @@ const Header = () => {
   const handleClose = () => setAnchorEl(null);
 
   const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("selectedTeam"); // Also clear team on logout
     handleClose();
     navigate("/login");
+  };
+
+  const handleChangeWorkspace = () => {
+    handleClose();
+    localStorage.removeItem("selectedTeam");
+    setCurrentTeam("");
+    navigate("/");
   };
 
   return (
@@ -40,34 +77,50 @@ const Header = () => {
         color: "#000",
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
         borderBottom: "1px solid #e0e0e0",
-        minHeight: 15, // ✅ Reduced height
+        minHeight: 48,
       }}
     >
       <Toolbar
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          // minHeight: 25, // ✅ Reduced from default 64px
-          // py: 0.5, // ✅ Reduced padding
-          // px: 2, // ✅ Reduced horizontal padding
+          minHeight: 48,
+          py: 0.5,
+          px: 2,
         }}
       >
         {/* Left - Logo */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <img
             src="/loandna_logo.png"
             alt="Logo"
-            style={{ height: "25px", cursor: "pointer" }} // ✅ Reduced from 36px
+            style={{ height: "28px", cursor: "pointer" }}
             onClick={() => navigate("/dashboard")}
           />
+
+          {/* ✅ NEW: Current Workspace Display */}
+          {currentTeam && (
+            <Chip
+              icon={<WorkspacesIcon />}
+              label={`Workspace: ${currentTeam}`}
+              variant="outlined"
+              size="small"
+              sx={{
+                color: "#0f62fe",
+                borderColor: "#0f62fe",
+                fontWeight: 600,
+                "& .MuiChip-icon": {
+                  color: "#0f62fe",
+                },
+              }}
+            />
+          )}
         </Box>
 
         {/* Center - Navigation */}
         <Box sx={{ display: "flex", gap: 2 }}>
-          {" "}
-          {/* ✅ Reduced from gap: 3 */}
+          {/* Dashboard Button */}
           <Button
-            disabled={IS_TEAM_SELECTED}
             color="inherit"
             sx={{
               textTransform: "none",
@@ -77,17 +130,17 @@ const Header = () => {
                   : "none",
               borderRadius: 0,
               fontWeight: 500,
-              fontSize: "0.875rem", // ✅ Reduced font size
-              py: 0.5, // ✅ Reduced button padding
-              px: 1.5, // ✅ Reduced horizontal padding
-              // minHeight: 32, // ✅ Reduced button height
+              fontSize: "0.875rem",
+              py: 0.5,
+              px: 1.5,
+              minHeight: 32,
             }}
             onClick={() => navigate("/dashboard")}
           >
             Dashboard
           </Button>
+          {/* Finalization Button */}
           <Button
-            disabled={IS_TEAM_SELECTED}
             color="inherit"
             sx={{
               textTransform: "none",
@@ -97,17 +150,17 @@ const Header = () => {
                   : "none",
               borderRadius: 0,
               fontWeight: 500,
-              fontSize: "0.875rem", // ✅ Reduced font size
+              fontSize: "0.875rem",
               py: 0.5,
               px: 1.5,
-              // minHeight: 32,
+              minHeight: 32,
             }}
             onClick={() => navigate("/finalization")}
           >
             Finalization
           </Button>
+          {/* Filter Button */}
           <Button
-            disabled={IS_TEAM_SELECTED}
             color="inherit"
             sx={{
               textTransform: "none",
@@ -117,10 +170,10 @@ const Header = () => {
                   : "none",
               borderRadius: 0,
               fontWeight: 500,
-              fontSize: "0.875rem", // ✅ Reduced font size
+              fontSize: "0.875rem",
               py: 0.5,
               px: 1.5,
-              // minHeight: 32,
+              minHeight: 32,
             }}
             onClick={() => navigate("/filter")}
           >
@@ -128,21 +181,16 @@ const Header = () => {
           </Button>
         </Box>
 
-        {/* Right - Avatar */}
+        {/* Right - Avatar & Menu */}
         <Box>
-          <IconButton
-            onClick={handleAvatarClick}
-            sx={{
-              p: 0.5, // ✅ Reduced padding
-            }}
-          >
+          <IconButton onClick={handleAvatarClick} sx={{ p: 0.5 }}>
             <Avatar
               sx={{
                 bgcolor: "#0f62fe",
                 fontWeight: 600,
-                width: 30, // ✅ Reduced from 40px
-                height: 30, // ✅ Reduced from 40px
-                fontSize: "0.875rem", // ✅ Smaller font
+                width: 30,
+                height: 30,
+                fontSize: "0.875rem",
               }}
             >
               {firstLetter}
@@ -154,28 +202,17 @@ const Header = () => {
             onClose={handleClose}
             transformOrigin={{ horizontal: "right", vertical: "top" }}
             anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-            PaperProps={{
-              sx: {
-                mt: 0.5,
-              },
-            }}
+            PaperProps={{ sx: { mt: 0.5 } }}
           >
             <MenuItem
-              onClick={() => {
-                localStorage.removeItem("selectedTeam");
-                handleClose();
-                navigate("/");
-              }}
+              onClick={handleChangeWorkspace}
+              sx={{ fontSize: "0.875rem", py: 0.75, px: 2 }}
             >
               Change Workspace
             </MenuItem>
             <MenuItem
               onClick={handleLogout}
-              sx={{
-                fontSize: "0.875rem", // ✅ Smaller menu text
-                py: 0.75, // ✅ Reduced menu item padding
-                px: 2,
-              }}
+              sx={{ fontSize: "0.875rem", py: 0.75, px: 2 }}
             >
               Logout
             </MenuItem>

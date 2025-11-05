@@ -163,13 +163,33 @@ const Dashboard = () => {
   // ✅ Confirm delete all
   const handleDeleteAllConfirm = async () => {
     try {
-      await axios.delete("http://127.0.0.1:8000/delete_all_json");
-      showSnackbar("All documents deleted successfully", "success");
+      // ✅ Get the currently selected team from localStorage
+      const team = localStorage.getItem("selectedTeam");
+      if (!team) {
+        showSnackbar(
+          "No team selected. Please select a workspace first.",
+          "error"
+        );
+        return;
+      }
+
+      // ✅ Pass the team as a query parameter in the DELETE request
+      await axios.delete("http://127.0.0.1:8000/delete_all_json", {
+        params: { team: team },
+      });
+
+      showSnackbar(
+        `All documents for the '${team.toUpperCase()}' workspace deleted successfully`,
+        "success"
+      );
       setDeleteAllDialogOpen(false);
       fetchDocuments(); // refresh table
     } catch (error) {
       console.error("Error deleting all documents:", error);
-      showSnackbar("Failed to delete all documents", "error");
+      showSnackbar(
+        error.response?.data?.detail || "Failed to delete all documents",
+        "error"
+      );
     }
   };
 
