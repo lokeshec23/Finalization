@@ -136,6 +136,7 @@ const Header = () => {
               minHeight: 32,
             }}
             onClick={() => navigate("/dashboard")}
+            disabled={selectedTeam?.trim() === ""}
           >
             Dashboard
           </Button>
@@ -156,6 +157,7 @@ const Header = () => {
               minHeight: 32,
             }}
             onClick={() => navigate("/finalization")}
+            disabled={selectedTeam?.trim() === ""}
           >
             Finalization
           </Button>
@@ -176,6 +178,7 @@ const Header = () => {
               minHeight: 32,
             }}
             onClick={() => navigate("/filter")}
+            disabled={selectedTeam?.trim() === ""}
           >
             Filter
           </Button>
