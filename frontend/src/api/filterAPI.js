@@ -15,9 +15,9 @@ export const filterAPI = {
   },
 
   // Get documents by category
-  getDocumentsByCategory: async (category, username = null) => {
+  getDocumentsByCategory: async (category, username = null, team) => {
     try {
-      const params = { category };
+      const params = { category, team };
       if (username) {
         params.username = username;
       }

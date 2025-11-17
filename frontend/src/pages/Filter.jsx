@@ -64,7 +64,8 @@ const Filter = () => {
     try {
       setLoading(true);
       const username = localStorage.getItem("username");
-      const data = await filterAPI.getDocumentsByCategory(category, username);
+      const team = localStorage.getItem("selectedTeam");
+      const data = await filterAPI.getDocumentsByCategory(category, username, team);
       setDocuments(data.documents || []);
 
       if (data.documents && data.documents.length > 0) {
